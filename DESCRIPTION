@@ -14,4 +14,5 @@ Depends:
 Imports:
   Matrix,
   pracma,
-  dplyr
+  dplyr,
+  monomvn
