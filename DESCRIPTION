@@ -1,0 +1,17 @@
+Package: ccube
+Type: Package
+Title: ccube
+Date: 2016-03-14
+Version: 0.0.0.9000
+Authors@R: person("Ke", "Yuan", email = "ke.yuan@gmail.com",
+    role = c("aut", "cre"))
+Maintainer: Ke Yuan <ke.yuan.09@gmail.com>
+Description: R functions for clustering cancer cell fractions.
+License: GPL-3
+LazyData: TRUE
+Depends:
+    R (>= 3.0)
+Imports:
+  Matrix,
+  pracma,
+  dplyr
