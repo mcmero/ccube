@@ -28,6 +28,7 @@ sort_components <- function(model) {
 #' @param maxiter VBEM maximum iteration
 #' @param fit_mult whether or not to estimate multiplicities
 #' @param fit_hyper whether or not to estimat hyperparameters
+#' @param use methods to get rough estimates of ccf
 #' @param verbose show progress
 #' @export
 #' @return a list containing model parameters
@@ -128,6 +129,7 @@ ccube_m6 <- function(mydata, epi=1e-3, init=2, prior, tol=1e-20, maxiter=1e3, fi
 
 #' Get a rough estimate of ccf and multiplicities
 #' @param mydata mutation data frame
+#' @param use methods for get rough estimates of ccf
 #' @return mydata mutation data frame
 #' @export
 GetCcf <- function(mydata, use = c("use_base", "use_one")) {

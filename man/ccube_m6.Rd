@@ -25,6 +25,8 @@ ccube_m6(mydata, epi = 0.001, init = 2, prior, tol = 1e-20,
 
 \item{fit_hyper}{whether or not to estimat hyperparameters}
 
+\item{use}{methods to get rough estimates of ccf}
+
 \item{verbose}{show progress}
 }
 \value{

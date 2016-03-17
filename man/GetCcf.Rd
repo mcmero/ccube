@@ -8,6 +8,8 @@ GetCcf(mydata, use = c("use_base", "use_one"))
 }
 \arguments{
 \item{mydata}{mutation data frame}
+
+\item{use}{methods for get rough estimates of ccf}
 }
 \value{
 mydata mutation data frame
