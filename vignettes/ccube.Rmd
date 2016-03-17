@@ -21,17 +21,23 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```{r}
 library(ccube)
 library(dplyr)
+library(colorspace)
+gg_color_hue <- function(n) {
+  hues = seq(15, 375, length=n+1)
+  hcl(h=hues, l=65, c=100)[1:n]
+}
+myColors <- gg_color_hue(10)
 ```
 
 ## Runing ccube on a toy dataset
 We generate a toy dataset with 500 mutations 
 ```{r, cache=T}
 set.seed(1234)
-numSnv <- 1500
-ccfSet <- c(0.96, 0.6, 0.2)
+numSnv <- 500
+ccfSet <- c(0.96, 0.6, 0.4)
 ccfTrue <- sample(ccfSet, numSnv, c(0.6,0.2,0.2), replace = T)
-purity <- 0.8
-cnPool <- as.integer(c(1,2,3))
+purity <- 0.9
+cnPool <- as.integer(c(2,2,2))
 totalCN <- sample(cnPool, numSnv, c(0.1, 0.5, 0.4), replace =T)
 
 mydata <- data.frame(mutation_id = seq_along(ccfTrue),
@@ -73,22 +79,23 @@ hist(mydata$true_ccf, 50)
 ```
 
 
-Now we overfit the data with 100 clones
+Now we truncate the mixture with 10 clones
 ```{r, cache=T}
 K =10
 res <- ccube_m6(mydata, epi=1e-3,
-                init=K, tol = 1e-10, maxiter = 1e3, fit_mult = T, fit_hyper = T, verbose = F)
-
-
-
-
+                init=K, tol = 1e-9, maxiter = 1e3, fit_mult = T, fit_hyper = T, 
+                use = "use_base", verbose = F)
 mydata$ccube_ccf_mean <- res$mu[res$label]
 mydata$ccube_mult <- res$full.model$bv
 ```
-Estimated ccf and their weights. There are two clusters with vary low weights indicating no data is assigned to them. 
+Estimated ccf cluster mean and their weights
 ```{r}
-res$mu
-res$full.model$Epi
+Emu <- res$full.model$ccfMean
+Epi <- res$full.model$Epi
+names(Epi) <- as.character(format(round(Emu, 2), nsmall = 2))
+barplot(Epi, las = 2, 
+        xlab = "cluster mean", ylab="expected weight", 
+        main = "cluster weights")
 
 ```
 
@@ -111,11 +118,6 @@ mydata <- mutate(rowwise(mydata),
 Here is a graph summary of ccube results. 
 ```{r}
 library(colorspace)
-gg_color_hue <- function(n) {
-  hues = seq(15, 375, length=n+1)
-  hcl(h=hues, l=65, c=100)[1:n]
-}
-myColors <- gg_color_hue(10)
 
 par(mfrow=c(2,2))
 uniqLabels <- unique(res$label)
