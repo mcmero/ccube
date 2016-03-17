@@ -75,7 +75,7 @@ hist(mydata$true_ccf, 50)
 
 Now we overfit the data with 100 clones
 ```{r, cache=T}
-K =100
+K =10
 res <- ccube_m6(mydata, epi=1e-3,
                 init=K, tol = 1e-10, maxiter = 1e3, fit_mult = T, fit_hyper = T, verbose = F)
 
@@ -136,7 +136,7 @@ Emu <- res$full.model$ccfMean
 Esigma <- res$full.model$ccfCov
 Epi <- res$full.model$Epi
 params <- data.frame(Emu, Esigma, Epi)
-xx <- seq(range(mydata$ccube_ccf)[1],range(mydata$ccube_ccf)[2],  length.out = 1000)
+xx <- seq(0, 2,  length.out = 1000)
 ll <- 0
 ll1 <- 0 
   
