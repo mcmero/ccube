@@ -9,7 +9,7 @@
 devtools::install_github("keyuan/ccube")
 ```
 
-## Get Started
+## Getting Started
 ```
 vinettes/ccube.Rmd
 ```
