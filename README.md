@@ -8,3 +8,8 @@
 ```r
 devtools::install_github("keyuan/ccube")
 ```
+
+## Get Started
+```
+vinettes/ccube.Rmd
+```
