@@ -1,5 +1,5 @@
 ---
-title: "Clustering cancer cell fractions"
+title: "Ccube: Clustering Cancer Cell Fractions"
 author: "Ke Yuan"
 date: "`r Sys.Date()`"
 output: 
@@ -13,7 +13,13 @@ vignette: >
   \usepackage[utf8]{inputenc}
 ---
 
-```{r echo = FALSE}
+
+## Installation
+```r
+devtools::install_github("keyuan/ccube")
+```
+
+```{r, echo = FALSE}
 # wch's setting 
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
@@ -38,7 +44,7 @@ ccfSet <- c(0.96, 0.6, 0.4)
 ccfTrue <- sample(ccfSet, numSnv, c(0.6,0.2,0.2), replace = T)
 purity <- 0.9
 cnPool <- as.integer(c(2,2,2))
-totalCN <- sample(cnPool, numSnv, c(0.1, 0.5, 0.4), replace =T)
+totalCN <- sample(cnPool, numSnv, c(0.1, 0.6, 0.3), replace =T)
 
 mydata <- data.frame(mutation_id = seq_along(ccfTrue),
                      true_ccf_label=ccfTrue,
