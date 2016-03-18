@@ -11,5 +11,5 @@ devtools::install_github("keyuan/ccube")
 
 ## Getting Started
 ```
-vinettes/ccube.Rmd
+vignettes/ccube.Rmd
 ```
