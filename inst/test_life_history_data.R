@@ -18,11 +18,9 @@ myColors <- gg_color_hue(10)
 
 mydata <- filter(snv, chr!="X")
 
-
+mydata <- sample_n(mydata, 500)
 
 tt <- GetPurity(mydata)
-
-
 
 res = ccube_m6(mydata, epi=1e-3,
          init=5, tol = 1e-10, maxiter = 1e3,

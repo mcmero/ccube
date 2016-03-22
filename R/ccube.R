@@ -469,30 +469,25 @@ cull <- function(model) {
 }
 
 
-
-vtox<-function(v,nA,nB,tA,tB)
-{
-  (nB - nB*v - nA*v) / (tA*v + tB*v + nB - tB -nA*v - nB*v)
-}
-
 #' Estimate purity
 #' @param data
 #' @return purity
 #' @export
 GetPurity <- function(mydata) {
+  vtox<-function(v,nA,nB,tA,tB)
+  {
+    (nB - nB*v - nA*v) / (tA*v + tB*v + nB - tB -nA*v - nB*v)
+  }
 
   tmpdata <- dplyr::filter(mydata, major_cn == minor_cn & major_cn + minor_cn <= 4)
   tmpdata <- dplyr::mutate(dplyr::rowwise(tmpdata), diploid = (major_cn + minor_cn == 2) )
   tmpdata <- dplyr::mutate(dplyr::rowwise(tmpdata), tetraploid = (major_cn + minor_cn == 4))
   tmpdata <- dplyr::mutate(tmpdata, vaf = var_counts/(var_counts+ref_counts))
-
-  hist(tmpdata$vaf,50)
   res <- vbgmm(tmpdata$vaf, init = 6, tol = 1e-5,  verbose = F)
   maxVaf <- max(res$mu[unique(res$label)])
   weights <- c(sum(tmpdata$diploid), sum(tmpdata$tetraploid))
   weights <- weights/sum(weights)
   purity  <- weights[1]*vtox(maxVaf, 2,0,1,1) + weights[2]*vtox(maxVaf, 2,0,2,2)
-  if (purity > 1) purity =1
   return(purity)
 }
 
