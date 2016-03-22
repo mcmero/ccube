@@ -73,6 +73,6 @@ ssm <- rename(ssm, ref_counts=a, total_counts=d, var_counts=d-a)
 ssm$purity <- GetPurity(ssm)
 
 write.table(ssm, file = "ssm_ccube.txt", sep = "\t", row.names = F, quote = F)
-write.table(unique(ssm$purity), file = "Sub-Challenge-1A.txt", sep = "\t", row.names = F, quote = F)
+write.table(unique(ssm$purity), file = "1A.txt", sep = "\t", row.names = F, quote = F)
 
 
