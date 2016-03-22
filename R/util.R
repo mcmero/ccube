@@ -117,3 +117,33 @@ MapVaf2CcfPyClone <- function(x, t, cn, cr, cv, bv,
     return(ccf)
   }
 }
+
+############ Vector dot product ############
+# handle single row matrix by multiplying each value
+# but not sum them up
+dot.ext <- function(x,y,mydim) {
+
+  if(missing(mydim)) pracma::dot(x,y) else {
+
+    if(1 %in% pracma::size(x) & mydim == 1) x * y else pracma::dot(x,y)
+  }
+}
+
+############ Logarithmic Multivariate Gamma function ############
+# Compute logarithm multivariate Gamma function.
+# Gamma_p(x) = pi^(p(p-1)/4) prod_(j=1)^p Gamma(x+(1-j)/2)
+# log Gamma_p(x) = p(p-1)/4 log pi + sum_(j=1)^p log Gamma(x+(1-j)/2)
+logmvgamma <- function(x, d) {
+
+  s <- pracma::size(x)
+
+  x <- matrix(as.numeric(x), nrow=1)
+
+  x <- bsxfun.se("+", kronecker(matrix(1,d,1), x), (1 - matrix(1:d))/2)
+
+  y <- d*(d-1)/4*log(pi) + colSums(lgamma(x))
+
+  y <- matrix(as.numeric(y), nrow=s[1], ncol=s[2])
+
+  y
+}
