@@ -1,5 +1,6 @@
 #!/home/yuan03/R-3.2.0/bin/Rscript
 
+library(dplyr)
 library(ccube)
 
 args <- commandArgs(trailingOnly = TRUE)
