@@ -1,6 +1,4 @@
 #!/home/yuan03/R-3.2.0/bin/Rscript
-
-library(dplyr)
 library(ccube)
 
 args <- commandArgs(trailingOnly = TRUE)
@@ -21,7 +19,7 @@ ssm$cn_ref <- NULL
 ssm$cn_tot <- NULL
 
 cnv <- na.omit(cnv)
-cnv <- filter(cnv, ssms!="" )
+cnv <- dplyr::filter(cnv, ssms!="" )
 
 if (nrow(cnv)>0) {
   cnvtmp1 <- strsplit(as.character(cnv$ssms), ";")
@@ -44,7 +42,7 @@ if (nrow(cnv)>0) {
     cnvtmp2[,j] = as.numeric(cnvtmp2[,j])
   }
 
-  ssm <- left_join(ssm, cnvtmp2, by=c("id"="V1"))
+  ssm <- dplyr::left_join(ssm, cnvtmp2, by=c("id"="V1"))
   ssm$major_cn <- ssm$V3
   ssm$minor_cn <- ssm$V2
   ssm$cn_frac <- ssm$V4
@@ -59,16 +57,16 @@ if (nrow(cnv)>0) {
 }
 
 clonalCnFrac <- sum(ssm$cn_frac==1)/nrow(ssm)
-ssm <- filter(ssm, cn_frac==1)
+ssm <- dplyr::filter(ssm, cn_frac==1)
 
 
 maxSnv <- 30000
 if (nrow(ssm) > maxSnv) {
-  ssm <- sample_n(ssm, maxSnv)
+  ssm <- dplyr::sample_n(ssm, maxSnv)
 }
 ssm$normal_cn = 2
-ssm <- rename(ssm, ref_counts=a, total_counts=d)
-ssm <- mutate(ssm, var_counts=total_counts-ref_counts, mutation_id = gene)
+ssm <- dplyr::rename(ssm, ref_counts=a, total_counts=d)
+ssm <- dplyr::mutate(ssm, var_counts=total_counts-ref_counts, mutation_id = gene)
 ssm$purity <- GetPurity(ssm)
 
 write.table(ssm, file = "ssm_ccube.txt", sep = "\t", row.names = F, quote = F)
