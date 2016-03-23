@@ -7,12 +7,10 @@ args <- commandArgs(trailingOnly = TRUE)
 ssm_file <- as.character(args[1])
 cnv_file <- as.character(args[2])
 
-
 ssm <- read.delim(ssm_file,
                   stringsAsFactors = F)
 cnv <- read.delim(cnv_file,
                   stringsAsFactors = F)
-
 
 ssm$major_cn = 1
 ssm$minor_cn = 1
@@ -70,7 +68,7 @@ if (nrow(ssm) > maxSnv) {
 }
 ssm$normal_cn = 2
 ssm <- rename(ssm, ref_counts=a, total_counts=d)
-ssm <- mutate(ssm, var_counts=total_counts-ref_counts)
+ssm <- mutate(ssm, var_counts=total_counts-ref_counts, mutation_id = gene)
 ssm$purity <- GetPurity(ssm)
 
 write.table(ssm, file = "ssm_ccube.txt", sep = "\t", row.names = F, quote = F)
