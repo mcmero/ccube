@@ -70,7 +70,7 @@ if (nrow(ssm) > maxSnv) {
 }
 ssm$normal_cn = 2
 ssm <- rename(ssm, ref_counts=a, total_counts=d)
-ssm <- mutate(ssm, var_counts=d-a)
+ssm <- mutate(ssm, var_counts=total_counts-ref_counts)
 ssm$purity <- GetPurity(ssm)
 
 write.table(ssm, file = "ssm_ccube.txt", sep = "\t", row.names = F, quote = F)
