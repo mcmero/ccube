@@ -482,6 +482,7 @@ GetPurity <- function(mydata) {
   tmpdata <- dplyr::mutate(dplyr::rowwise(tmpdata), diploid = (major_cn + minor_cn == 2) )
   tmpdata <- dplyr::mutate(dplyr::rowwise(tmpdata), tetraploid = (major_cn + minor_cn == 4))
   tmpdata <- dplyr::mutate(tmpdata, vaf = var_counts/(var_counts+ref_counts))
+  tmpdata$vaf
   res <- vbsmm(tmpdata$vaf, init = 6, tol = 1e-5,  verbose = F)
   pool <- res$mu[unique(res$label)]
   ww <- (res$full.model$Epi[unique(res$label)]>1e-1)
