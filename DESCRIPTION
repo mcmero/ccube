@@ -10,9 +10,9 @@ Description: R functions for clustering cancer cell fractions.
 License: GPL-3
 LazyData: TRUE
 Depends:
-    R (>= 3.0)
+    R (>= 3.0),
+    Matrix
 Imports:
-  Matrix,
   pracma,
   dplyr,
   monomvn
