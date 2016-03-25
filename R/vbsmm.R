@@ -132,11 +132,6 @@ initialization_smm <- function(X, init, prior) {
 
     k <- init
 
-    idx <- sample(1:n, k)
-
-    m <- X[,idx,drop=F]
-
-
     res <- kmeans(t(X), k)
     label <- res$cluster
     normalMean <- t(res$centers)
