@@ -43,6 +43,7 @@ ccube_m6 <- function(mydata, epi=1e-3, init=2, prior, tol=1e-20, maxiter=1e3, fi
   bn <- mydata$var_counts
   cn <- unique(mydata$normal_cn)
   cr <- mydata$major_cn + mydata$minor_cn
+  major_cn <- mydata$major_cn
   purity <- unique(mydata$purity)
   bv <- mydata$mult
   rawCcf <- mydata$ccf
@@ -93,7 +94,7 @@ ccube_m6 <- function(mydata, epi=1e-3, init=2, prior, tol=1e-20, maxiter=1e3, fi
 
 	while(!converged & vbiter < maxiter & !degenerated) {
 	  vbiter <- vbiter + 1
-		model <- VariationalMaximimizationStep(bn, dn, cn, cr, epi, purity, model,
+		model <- VariationalMaximimizationStep(bn, dn, cn, cr, major_cn, epi, purity, model,
 		                                       fit_mult = fit_mult, fit_hyper = fit_hyper)
 		model <- VarationalExpectationStep(bn, dn, cn, cr, epi, purity, model)
 		L[vbiter] <- variationalLowerBound(bn, dn, cn, cr, epi, purity, model)/n
@@ -235,7 +236,7 @@ initialization <- function(X, init, prior) {
 
 
 ############ Variational-Maximimization ############
-VariationalMaximimizationStep <- function(bn, dn, cn, cr, epi, purity, model, fit_mult = F, fit_hyper = T) {
+VariationalMaximimizationStep <- function(bn, dn, cn, cr, major_cn, epi, purity, model, fit_mult = F, fit_hyper = T) {
 
   bv <- model$bv
   dirichletConcentration0 <- model$dirichletConcentration0
@@ -294,8 +295,8 @@ VariationalMaximimizationStep <- function(bn, dn, cn, cr, epi, purity, model, fi
   numberOfDataPoints <- nrow(responsibility)
   if (fit_mult) {
     for (ii in 1:numberOfDataPoints) {
-      qq <- rep(0, cr[ii]-1)
-      bvPool <- 1:(cr[ii]-1)
+      qq <- rep(0, major_cn[ii])
+      bvPool <- 1:major_cn[ii]
       for (jj in seq_along(bvPool) ) {
         aa <- purity * (bvPool[jj] *(1-epi) -cr[ii]*epi) / ((1-purity)*cn + purity * cr[ii])
         aa2 <- aa^2
@@ -478,21 +479,20 @@ GetPurity <- function(mydata) {
   {
     (nB - nB*v - nA*v) / (tA*v + tB*v + nB - tB -nA*v - nB*v)
   }
-  tmpdata <- dplyr::filter(mydata, major_cn == minor_cn & major_cn + minor_cn <= 4)
+  tmpdata <- dplyr::filter(mydata, major_cn == minor_cn & major_cn + minor_cn == 2)
   tmpdata <- dplyr::mutate(dplyr::rowwise(tmpdata), diploid = (major_cn + minor_cn == 2) )
   tmpdata <- dplyr::mutate(dplyr::rowwise(tmpdata), tetraploid = (major_cn + minor_cn == 4))
   tmpdata <- dplyr::mutate(tmpdata, vaf = var_counts/(var_counts+ref_counts))
+  tmpdata <- dplyr::mutate(tmpdata, cp = if (diploid) vtox(vaf, 2,0,1,1) else vtox(vaf, 2,0,2,2) )
   K = 6
   if (K > nrow(tmpdata)) {
     K = nrow(tmpdata) - 1
   }
-  res <- vbsmm(tmpdata$vaf, init = K, tol = 1e-5,  verbose = F)
+  res <- vbsmm(tmpdata$cp, init = K, tol = 1e-5,  verbose = F)
   pool <- res$mu[unique(res$label)]
   ww <- (res$full.model$Epi[unique(res$label)]>1e-1)
-  maxVaf <- max(pool[ww])
-  weights <- c(sum(tmpdata$diploid), sum(tmpdata$tetraploid))
-  weights <- weights/sum(weights)
-  purity  <- weights[1]*vtox(maxVaf, 2,0,1,1) + weights[2]*vtox(maxVaf, 2,0,2,2)
+  maxCp <- max(pool[ww])
+  purity  <- if (maxCp > 1) 1 else maxCp
   return(purity)
 }
 
