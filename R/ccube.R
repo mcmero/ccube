@@ -246,7 +246,7 @@ VariationalMaximimizationStep <- function(bn, dn, cn, cr, major_cn, epi, purity,
 
 
 
-  # Gaussian approximation for each data point
+  # Gaussian approximation for each clone
   ccfMean = model$ccfMean
   ccfCov = model$ccfCov
 
@@ -261,7 +261,7 @@ VariationalMaximimizationStep <- function(bn, dn, cn, cr, major_cn, epi, purity,
       tmp <- NULL
       jj <- 0
       while (!is.numeric(tmp)) {
-        stopifnot(jj < 100)
+        stopifnot(jj < 1000)
         jj <- jj + 1
         if (jj > 1) {upper <- upper + 0.1}
         tmp <- try(suppressWarnings( uniroot(
@@ -320,7 +320,7 @@ VariationalMaximimizationStep <- function(bn, dn, cn, cr, major_cn, epi, purity,
     upper <- 1e-2
     lower <- 1e-99
     while (!is.numeric(tmp)) {
-      stopifnot(jj < 100)
+      stopifnot(jj < 1000)
       jj <- jj + 1
       if (jj > 1) {upper <- upper + 1e-3}
       tmp <- try(suppressWarnings( uniroot(
