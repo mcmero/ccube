@@ -314,23 +314,23 @@ VariationalMaximimizationStep <- function(bn, dn, cn, cr, major_cn, epi, purity,
 
   # estimate hyper-parameters
   if (fit_hyper) {
-    Elogpi <- sum(digamma(dirichletConcentration) - digamma(sum(dirichletConcentration)))
-    tmp <- NULL
-    jj <- 0
-    upper <- 1e-2
-    lower <- 1e-99
-    while (!is.numeric(tmp)) {
-      stopifnot(jj < 1000)
-      jj <- jj + 1
-      if (jj > 1) {upper <- upper + 1e-3}
-      tmp <- try(suppressWarnings( uniroot(
-        function(x) {
-          term1 <- digamma(k*x) - digamma(x)
-          return(term1-Elogpi/k)
-        },
-        c(lower, upper), extendInt = "yes")$root), T)
-    }
-    model$dirichletConcentration0 <- tmp
+#     Elogpi <- sum(digamma(dirichletConcentration) - digamma(sum(dirichletConcentration)))
+#     tmp <- NULL
+#     jj <- 0
+#     upper <- 1e-2
+#     lower <- 1e-99
+#     while (!is.numeric(tmp)) {
+#       stopifnot(jj < 1000)
+#       jj <- jj + 1
+#       if (jj > 1) {upper <- upper + 1e-3}
+#       tmp <- try(suppressWarnings( uniroot(
+#         function(x) {
+#           term1 <- digamma(k*x) - digamma(x)
+#           return(term1+Elogpi/k)
+#         },
+#         c(lower, upper), extendInt = "yes")$root), T)
+#     }
+#     model$dirichletConcentration0 <- tmp
     model$normalMean <- mean(ccfMean)
     model$invWhishartScale <-mean((ccfMean - normalMean)^2 + ccfCov)
   }
