@@ -480,6 +480,9 @@ GetPurity <- function(mydata) {
     (nB - nB*v - nA*v) / (tA*v + tB*v + nB - tB -nA*v - nB*v)
   }
   tmpdata <- dplyr::filter(mydata, major_cn == minor_cn & major_cn != 0 )
+  if (nrow(tmpdata) == 0) {
+    return(NA)
+  }
   tmpdata <- dplyr::mutate(dplyr::rowwise(tmpdata), ploidy = major_cn + minor_cn)
   tmpdata <- dplyr::mutate(tmpdata, vaf = var_counts/(var_counts+ref_counts))
   tmpdata <- dplyr::mutate(dplyr::rowwise(tmpdata), cp = vtox(vaf, 2,0,ploidy/2,ploidy/2))
