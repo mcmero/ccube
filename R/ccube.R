@@ -479,11 +479,11 @@ GetPurity <- function(mydata) {
   {
     (nB - nB*v - nA*v) / (tA*v + tB*v + nB - tB -nA*v - nB*v)
   }
-  tmpdata <- dplyr::filter(mydata, major_cn == minor_cn & (major_cn + minor_cn == 2 | major_cn+minor_cn==4))
-  tmpdata <- dplyr::mutate(dplyr::rowwise(tmpdata), diploid = (major_cn + minor_cn == 2) )
-  tmpdata <- dplyr::mutate(dplyr::rowwise(tmpdata), tetraploid = (major_cn + minor_cn == 4))
+  tmpdata <- dplyr::filter(mydata, major_cn == minor_cn & major_cn != 0 )
+  tmpdata <- dplyr::mutate(dplyr::rowwise(tmpdata), ploidy = major_cn + minor_cn)
   tmpdata <- dplyr::mutate(tmpdata, vaf = var_counts/(var_counts+ref_counts))
-  tmpdata <- dplyr::mutate(tmpdata, cp = if (diploid) vtox(vaf, 2,0,1,1) else vtox(vaf, 2,0,2,2) )
+  tmpdata <- dplyr::mutate(dplyr::rowwise(tmpdata), cp = vtox(vaf, 2,0,ploidy/2,ploidy/2))
+  tmpdata <- dplyr::filter(tmpdata, !is.infinite(cp) & !is.na(cp))
   K = 6
   if (K > nrow(tmpdata)) {
     K = nrow(tmpdata) - 1
