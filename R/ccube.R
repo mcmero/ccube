@@ -296,7 +296,7 @@ VariationalMaximimizationStep <- function(bn, dn, cn, cr, major_cn, epi, purity,
   if (fit_mult) {
     for (ii in 1:numberOfDataPoints) {
       qq <- rep(0, major_cn[ii])
-      bvPool <- 1:major_cn[ii]
+      bvPool <- 0:major_cn[ii]
       for (jj in seq_along(bvPool) ) {
         aa <- purity * (bvPool[jj] *(1-epi) -cr[ii]*epi) / ((1-purity)*cn + purity * cr[ii])
         aa2 <- aa^2
@@ -493,8 +493,9 @@ GetPurity <- function(mydata) {
   }
   res <- vbsmm(tmpdata$cp, init = K, tol = 1e-5,  verbose = F)
   pool <- res$mu[unique(res$label)]
-  ww <- (res$full.model$Epi[unique(res$label)]>1e-1)
-  maxCp <- max(pool[ww])
+  ww <- (res$full.model$Epi[unique(res$label)]>1e-2)
+  pool1 <- pool[ww]
+  maxCp <- max(pool1[pool1 <=1])
   purity  <- if (maxCp > 1) 1 else maxCp
   return(purity)
 }
