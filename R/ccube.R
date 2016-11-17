@@ -261,7 +261,9 @@ VariationalMaximimizationStep <- function(bn, dn, cn, cr, major_cn, epi, purity,
       tmp <- NULL
       jj <- 0
       while (!is.numeric(tmp)) {
-        stopifnot(jj < 1000)
+        if (jj >=  1000) {
+          break
+        }
         jj <- jj + 1
         if (jj > 1) {upper <- upper + 0.1}
         tmp <- try(suppressWarnings( uniroot(
