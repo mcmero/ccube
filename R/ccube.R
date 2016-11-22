@@ -490,8 +490,9 @@ GetPurity <- function(mydata) {
   tmpdata <- dplyr::mutate(dplyr::rowwise(tmpdata), cp = vtox(vaf, 2,0,ploidy/2,ploidy/2))
   tmpdata <- dplyr::filter(tmpdata, !is.infinite(cp) & !is.na(cp))
   K = 6
-  if (K > nrow(tmpdata)) {
+  if (K >= nrow(tmpdata)) {
     K = nrow(tmpdata) - 1
+    if (K == 0) {K = 1}
   }
   res <- vbsmm(tmpdata$cp, init = K, tol = 1e-5,  verbose = F)
   pool <- res$mu[unique(res$label)]
