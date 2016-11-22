@@ -494,12 +494,17 @@ GetPurity <- function(mydata) {
     K = nrow(tmpdata) - 1
     if (K == 0) {K = 1}
   }
-  res <- vbsmm(tmpdata$cp, init = K, tol = 1e-5,  verbose = F)
-  pool <- res$mu[unique(res$label)]
-  ww <- (res$full.model$Epi[unique(res$label)]>1.5e-2)
-  pool1 <- pool[ww]
-  maxCp <- max(pool1[pool1 <=1])
-  purity  <- if (maxCp > 1) 1 else maxCp
+  if (nrow(tmpdata) == 1) {
+    purity <- tmpdata$cp
+  } else {
+    res <- vbsmm(tmpdata$cp, init = K, tol = 1e-5,  verbose = F)
+    pool <- res$mu[unique(res$label)]
+    ww <- (res$full.model$Epi[unique(res$label)]>1.5e-2)
+    pool1 <- pool[ww]
+    maxCp <- max(pool1[pool1 <=1])
+    purity  <- if (maxCp > 1) 1 else maxCp
+  }
+  
   return(purity)
 }
 
