@@ -15,14 +15,16 @@ sort_components <- function(model) {
 
   model$dirichletConcentration <- model$dirichletConcentration[idx]
 
-  model
+  model$normalMean <- model$normalMean[idx]
+
+  model$invWhishartScale <- model$invWhishartScale[idx]
 }
 
 logChoose <- function(n, k) {
   return(
-    lgamma(n + 1) - lgamma(k+1) - lgamma(n-k+1) 
+    lgamma(n + 1) - lgamma(k+1) - lgamma(n-k+1)
          )
-  
+
 }
 
 #' Run Ccube with model 6: Normal-Binomial
@@ -259,9 +261,9 @@ VariationalMaximimizationStep <- function(bn, dn, cn, cr, major_cn, epi, purity,
   k <- length(ccfMean)
     Bn = (1-purity)*cn + purity*cr
     Cn = purity*(bv*(1-epi) - cr*epi)
-    
+
     ccfMeanOld <- ccfMean
-    
+
     for (i in 1:k){
       term1 = 1/invWhishartScale*normalMean
       term2 = 1/invWhishartScale
@@ -483,7 +485,7 @@ cull <- function(model) {
 
 
 #' Estimate purity
-#' @param data
+#' @param mydata ccube data
 #' @return purity
 #' @export
 GetPurity <- function(mydata) {
@@ -514,7 +516,7 @@ GetPurity <- function(mydata) {
     maxCp <- max(pool1[pool1 <=1])
     purity  <- if (maxCp > 1) 1 else maxCp
   }
-  
+
   return(purity)
 }
 

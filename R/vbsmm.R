@@ -154,7 +154,7 @@ initialization_smm <- function(X, init, prior) {
 
           k <- ncol(init)
           m <- init
-          label <- apply(bsxfun.se("-", pracma::crossprod(m, X),
+          label <- apply(bsxfun.se("-", crossprod(m, X),
                                    as.matrix(dot.ext(m,m,1)/2)), 2, which.max)
           R <- as.matrix(Matrix::sparseMatrix(1:n, label, x=1))
 
@@ -408,7 +408,7 @@ variationalLowerBound_smm <- function(X, model, prior) {
     logW[i] <- -2 * sum(log(diag(U)))
 
     Xs <- bsxfun.se("*", bsxfun.se("-", X, as.matrix(xbar[,i,drop=F])), t(sqrtRU[,i,drop=F]))
-    V <- chol(tcrossprod(Xs, Xs)/omegak[i])
+    V <- chol(Matrix::tcrossprod(Xs, Xs)/omegak[i])
     Q <- solve(U, V)
     # equivalent to tr(SW)=trace(S/M)
     trSW[i] <- pracma::dot(as.numeric(Q), as.numeric(Q))

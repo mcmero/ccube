@@ -13,7 +13,8 @@ Depends:
     R (>= 3.0),
     methods
 Imports:
-  Matrix,
-  pracma,
-  dplyr,
-  monomvn
+    Matrix,
+    pracma,
+    dplyr,
+    monomvn
+RoxygenNote: 5.0.1

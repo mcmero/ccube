@@ -147,3 +147,179 @@ logmvgamma <- function(x, d) {
 
   y
 }
+
+
+#' Make Ccube results plot
+#' @param ssm data
+#' @param res Ccube result list
+#' @param myColors colors
+#' @param printPlot output flag
+#' @param icgc icgc path
+#' @param codeName path
+#' @param sampleName sample name
+#' @return NULL
+#' @export
+MakeCcubeStdPlot <- function(ssm, res, myColors, printPlot = F, icgc = NULL, codeName = NULL, sampleName= NULL) {
+
+  if (printPlot) {
+    resultsFolder <- paste0(icgc, codeName, sampleName)
+    fn = paste0(resultsFolder, "/",
+                sampleName, "_results_summary.pdf")
+    pdf(fn, width=8, height=8)
+  }
+
+  par(mfrow=c(2,2))
+  plot(ssm$ccube_ccf, ssm$vaf, col = myColors[res$label],
+       xlab = "cancer cell fraction", ylab = "variant allele frequecy",
+       main = "ccf vs vaf (colored by cluster memebership)")
+  cellularity <- unique(ssm$purity)
+  ssm$total_cn =ssm$major_cn+ssm$minor_cn
+  uniqueTotCn = unique(ssm$total_cn)
+  xx = seq(0,2, length.out = 100)
+  for (cn in uniqueTotCn) {
+    for (i in 1:cn) {
+      points(MapVaf2CcfPyClone(xx, cellularity, 2, cn, cn, i, constraint = F), xx, type = 'l')
+    }
+  }
+
+  Emu <- res$full.model$ccfMean
+  Esigma <- res$full.model$ccfCov
+  Epi <- res$full.model$Epi
+
+  params <- data.frame(Emu, Esigma, Epi)
+  xx <- seq(0,2,  length.out = 1000)
+  ll <- 0
+  ll1 <- 0
+
+  for (j in seq_len(nrow(params))) {
+    ll <- ll + params[j,]$Epi * dnorm(xx, mean = params[j,]$Emu, sd = sqrt(params[j,]$Esigma))
+  }
+
+  hist(ssm$ccube_ccf, density=20, breaks=20, prob=TRUE,
+       main = "ccf histogram +
+       cluster uncertainties",
+       xlab = "cancer cell fraction")
+  lines(xx,ll, lwd=2, col = "darkred")
+
+  numSnv <- table(res$label)
+  uniqLabels = unique(res$label)
+  names(numSnv) <- as.character(format(round(Emu[sort(uniqLabels)], 2), nsmall = 2))
+  barplot(numSnv, las = 2, col = myColors[sort(uniqLabels)],
+          xlab = "cluster mean", ylab="number of variants",
+          main = "cluster prevalence")
+  if (printPlot) {
+    dev.off()
+  }
+
+}
+
+#' Check if the result has a clonal cluster
+#' @param res Ccube result list
+#' @return TRUE/FALSE
+#' @export
+CheckClonalCluster <- function (res) {
+  assignments <- as.data.frame(table(res$label), stringsAsFactors = F)
+  assignments <- mutate(assignments, Var1 = as.integer(Var1))
+  mu <- res$mu[assignments$Var1]
+  ci_95 <- 2*sqrt(res$full.model$ccfCov)
+  ci <- ci_95[assignments$Var1]
+  num_clonal <- sum(assignments$Freq[which(mu-ci >= 0.9 | mu+ci >=0.9)])
+  return(num_clonal > 0)
+}
+
+
+#' Remove empty clusters
+#' @param model Ccube result list
+#' @return Ccube result list
+#' @export
+CullEmptyCluster <- function(model) {
+
+  uniqLabels <- unique(model$label)
+
+  idx <- sort(uniqLabels)
+
+  model$R=model$R[, idx]
+
+  model$mu=model$mu[, idx]
+
+  model$full.model$ccfMean <- model$full.model$ccfMean[, idx]
+
+  model$full.model$ccfCov <- model$full.model$ccfCov[,idx]
+
+  model$full.model$logResponsibility <- logsumexp(model$full.model$logResponsibility[, idx])
+
+  model$full.model$responsibility <- exp(model$full.model$logResponsibility)
+
+  model$full.model$dirichletConcentration <- model$full.model$dirichletConcentration[idx]
+
+  model$full.model$normalMean <- model$full.model$normalMean[idx]
+
+  model$full.model$invWhishartScale <- model$full.model$invWhishartScale[idx]
+
+  model$full.model$Epi <- model$full.model$Epi[idx]/sum(model$full.model$Epi[idx])
+
+  model
+}
+
+
+#' Write files in PCAWG-11 formats
+#' @param ssm data
+#' @param res Ccube result list
+#' @param icgc icgc path
+#' @param codeName path
+#' @param sampleName sample name
+#' @return NULL
+#' @export
+WritePcawgFormats <- function(ssm, res, icgc, codeName, sampleName) {
+  ## output calibration format
+  uniqLabels <- unique(res$label)
+  resultsFolder <- paste0(icgc, codeName, sampleName)
+  dir.create(resultsFolder, recursive = T)
+
+  id <- Reduce(rbind, strsplit(as.character(ssm$gene), "_", fixed = T), c())
+
+  # Multiplicity
+  mult <- data.frame(chr = id[,1], pos = id[,2])
+  mult$tumour_copynumber <- ssm$major_cn+ssm$minor_cn
+  mult$multiplicity <- ssm$ccube_mult
+  fn <- paste0(resultsFolder, "/",
+               sampleName, "_multiplicity.txt")
+  write.table(mult, file = fn, sep = "\t", row.names = F, quote = F)
+  shellCommand <- paste0("gzip -f ", fn)
+  system(shellCommand, intern = TRUE)
+
+  # Assignment
+  mutAssign <- data.frame(chr = id[,1], pos = id[,2])
+
+  if (length(uniqLabels) == 1) {
+    mutR = data.frame(res$R)
+    colnames(mutR) <- "cluster_1"
+  } else {
+    mutR <- data.frame(res$R[, sort(uniqLabels)])
+    colnames(mutR) <- paste0("cluster_", seq_along(uniqLabels))
+  }
+
+  mutAssign <- data.frame(mutAssign, mutR)
+  fn <- paste0(resultsFolder, "/",
+               sampleName, "_assignment_probability_table.txt")
+  write.table(mutAssign, file = fn, sep = "\t", row.names = F, quote = F)
+  shellCommand <- paste0("gzip -f ", fn)
+  system(shellCommand, intern = TRUE)
+
+  # structure
+  cellularity <- unique(ssm$purity)
+  clusterCertainty <- as.data.frame(table(res$label), stringsAsFactors = F)
+  clusterCertainty <- rename(clusterCertainty, cluster = Var1, n_ssms = Freq)
+  clusterCertainty$proportion <- res$mu[as.integer(clusterCertainty$cluster)] * cellularity
+  clusterCertainty$cluster <- seq_along(uniqLabels)
+  fn <- paste0(resultsFolder, "/",
+               sampleName, "_subclonal_structure.txt")
+  write.table(clusterCertainty, file = fn, sep = "\t", row.names = F, quote = F)
+  shellCommand <- paste0("gzip -f ", fn)
+  system(shellCommand, intern = TRUE)
+
+}
+
+
+
+
