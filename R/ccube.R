@@ -18,6 +18,12 @@ sort_components <- function(model) {
   model
 }
 
+logChoose <- function(n, k) {
+  return(
+    lgamma(n + 1) - lgamma(k+1) - lgamma(n-k+1) 
+         )
+  
+}
 
 #' Run Ccube with model 6: Normal-Binomial
 #' @param mydata mutation data frame
@@ -253,6 +259,9 @@ VariationalMaximimizationStep <- function(bn, dn, cn, cr, major_cn, epi, purity,
   k <- length(ccfMean)
     Bn = (1-purity)*cn + purity*cr
     Cn = purity*(bv*(1-epi) - cr*epi)
+    
+    ccfMeanOld <- ccfMean
+    
     for (i in 1:k){
       term1 = 1/invWhishartScale*normalMean
       term2 = 1/invWhishartScale
@@ -262,6 +271,7 @@ VariationalMaximimizationStep <- function(bn, dn, cn, cr, major_cn, epi, purity,
       jj <- 0
       while (!is.numeric(tmp)) {
         if (jj >=  1000) {
+          tmp <- ccfMeanOld[i]
           break
         }
         jj <- jj + 1
@@ -305,7 +315,7 @@ VariationalMaximimizationStep <- function(bn, dn, cn, cr, major_cn, epi, purity,
         bb <- epi
         term1 <- sum(responsibility[ii, ] * bn[ii] * (log (aa * ccfMean +bb) - aa2*ccfCov/(2 * (aa * ccfMean +bb)^2 ) ))
         term2 <- sum(responsibility[ii, ] * (dn[ii] - bn[ii]) * (log (1 - aa * ccfMean - bb) - aa2*ccfCov/(2 * (1 - aa * ccfMean -bb)^2)  ))
-        term3 <- sum( responsibility[ii, ]*log(choose(dn[ii], bn[ii]) ))
+        term3 <- sum( responsibility[ii, ]*  logChoose(dn[ii], bn[ii]) )
         qq[jj] <- term1 + term2 + term3
       }
       bv[ii] <- bvPool[which.max(qq)]
@@ -440,7 +450,7 @@ variationalLowerBound <- function(bn, dn, cn, cr, epi, purity, model) {
 
     Epbk[,i] <- sum(R[,i]*(bn * (log (aa * ccfMean[i] +bb) - aa2*ccfCov[,i]/(2 * (aa * ccfMean[i] +bb)^2 ) ) +
       (dn - bn) * (log (1 - aa * ccfMean[i] - bb) - aa2*ccfCov[,i]/(2 * (1 - aa * ccfMean[i] -bb)^2)))) +
-      sum(R[,i]*log(choose(dn,bn)))
+      sum( R[,i]*logChoose(dn, bn) )
     q <- solve(t(U0), m[,i,drop=F]-m0)
     mm0Wmm0[i] <- pracma::dot(q, q)
     U <- chol(M[,i])
