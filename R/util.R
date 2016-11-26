@@ -320,6 +320,92 @@ WritePcawgFormats <- function(ssm, res, icgc, codeName, sampleName) {
 
 }
 
+#' Parse old cnv_data.txt files
+#' @param ssm ssms
+#' @param cnv copy number
+#' @return ccube data frame
+#' @export
+ParseSnvCnaOld <- function (ssm, cnv) {
+  ssm$major_cn = 1
+  ssm$minor_cn = 1
+  ssm$cn_frac = 1
+  ssm$mu_r <- NULL
+  ssm$mu_v <- NULL
+  ssm$cn_ref <- NULL
+  ssm$cn_tot <- NULL
 
+  cnv <- na.omit(cnv)
+  cnv <- dplyr::filter(cnv, ssms!="" )
 
+  if (nrow(cnv)>0) {
+    cnvtmp1 <- strsplit(as.character(cnv$ssms), ";")
+    for (j in seq_len(nrow(cnv))) {
+      if (length(cnvtmp1[[j]])==0) { next }
+      cnvtmp1[[j]] = paste(cnvtmp1[[j]], cnv[j,]$frac, sep="," )
+    }
+    cnvtmp1 <- unlist(cnvtmp1)
+    cnvtmp2 <- Reduce(
+      rbind, strsplit(cnvtmp1, ",")
+    )
+
+    if (is.null(dim(cnvtmp2) )) {
+      cnvtmp2 = as.data.frame(t(cnvtmp2), stringsAsFactors=F)
+    } else {
+      cnvtmp2 = as.data.frame(cnvtmp2, stringsAsFactors=F)
+    }
+
+    for (j in 2:ncol(cnvtmp2)) {
+      cnvtmp2[,j] = as.numeric(cnvtmp2[,j])
+    }
+
+    ssm <- dplyr::left_join(ssm, cnvtmp2, by=c("id"="V1"))
+    ssm$major_cn <- ssm$V3
+    ssm$minor_cn <- ssm$V2
+    ssm$cn_frac <- ssm$V4
+
+    ssm$V2 <- NULL
+    ssm$V3 <- NULL
+    ssm$V4 <- NULL
+
+    ssm[is.na(ssm[,5]), 5] = 1
+    ssm[is.na(ssm[,6]), 6] = 1
+    ssm[is.na(ssm[,7]), 7] = 1
+  }
+  return(ssm)
+}
+
+#' Parse new consensus files
+#' @param ssm ssms
+#' @param cnv copy number
+#' @return ccube data frame
+#' @export
+ParseSnvCnaPreConsensus <- function(ssm, cnv) {
+  cnv <- na.omit(cnv)
+  id <- Reduce(rbind, strsplit(as.character(ssm$gene), "_", fixed = T), c())
+  ssm$chr = as.integer(id[,1])
+  ssm$pos = as.integer(id[,2])
+  ssm$mu_r <- NULL
+  ssm$mu_v <- NULL
+  ssm$cn_ref <- NULL
+  ssm$cn_tot <- NULL
+  ssm$cn_frac = 1
+  ssm$major_cn = NA
+  ssm$minor_cn = NA
+  ssm$star = NA
+  # (pos >= cnv[jj,]$start & pos <= cnv[jj,]$end)
+  for (jj in seq_len(nrow(cnv)) ) {
+    cc = cnv[jj,]
+    tmp = dplyr::filter(rowwise(ssm), chr == cc$chromosome &  (pos >= cc$start & pos <= cc$end))
+    if (nrow(tmp) > 0) {
+      idx <- which(ssm$id %in% tmp$id)
+      ssm[idx, ]$major_cn <- cc$major_cn
+      ssm[idx, ]$minor_cn <- cc$minor_cn
+      ssm[idx, ]$star <- cc$star
+    }
+  }
+  ssm$chr <-NULL
+  ssm$pos <-NULL
+  ssm <- dplyr::filter(ssm, !is.na(major_cn) & !is.na(minor_cn) & !is.na(star))
+  return(ssm)
+}
 
