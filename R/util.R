@@ -380,7 +380,7 @@ ParseSnvCnaOld <- function (ssm, cnv) {
 #' @return ccube data frame
 #' @export
 ParseSnvCnaPreConsensus <- function(ssm, cnv) {
-  cnv <- na.omit(cnv)
+
   id <- Reduce(rbind, strsplit(as.character(ssm$gene), "_", fixed = T), c())
   ssm$chr = as.integer(id[,1])
   ssm$pos = as.integer(id[,2])
