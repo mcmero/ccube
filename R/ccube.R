@@ -15,9 +15,7 @@ sort_components <- function(model) {
 
   model$dirichletConcentration <- model$dirichletConcentration[idx]
 
-  model$normalMean <- model$normalMean[idx]
-
-  model$invWhishartScale <- model$invWhishartScale[idx]
+  model
 }
 
 
@@ -40,7 +38,7 @@ logChoose <- function(n, k) {
 #' @param verbose show progress
 #' @export
 #' @return a list containing model parameters
-ccube_m6 <- function(mydata, epi=1e-3, init=2, prior, tol=1e-20, maxiter=1e3, fit_mult = F, fit_hyper = T, use = c("use_base", "use_one"),verbose=FALSE) {
+ccube_m6 <- function(mydata, epi=1e-3, init=2, prior=NULL, tol=1e-20, maxiter=1e3, fit_mult = F, fit_hyper = T, use = c("use_base", "use_one"),verbose=FALSE) {
 
   stopifnot(
     all(c("var_counts","ref_counts","normal_cn",
@@ -63,7 +61,7 @@ ccube_m6 <- function(mydata, epi=1e-3, init=2, prior, tol=1e-20, maxiter=1e3, fi
 
 	message(sprintf("Running VB-Normal-Binomial on a %d-by-%d data with %d clusters ...\n", n, d, init))
 
-	if(missing(prior)) {
+	if(is.null(prior)) {
 
 		if( length(init) == 1 ) {
 			# General prior with equal dirichletConcentration
@@ -439,25 +437,32 @@ VariationalMaximimizationStep <- function(bn, dn, cn, cr, major_cn, epi, purity,
 
   # estimate hyper-parameters
   if (fit_hyper) {
-#     Elogpi <- sum(digamma(dirichletConcentration) - digamma(sum(dirichletConcentration)))
-#     tmp <- NULL
-#     jj <- 0
-#     upper <- 1e-2
-#     lower <- 1e-99
-#     while (!is.numeric(tmp)) {
-#       stopifnot(jj < 1000)
-#       jj <- jj + 1
-#       if (jj > 1) {upper <- upper + 1e-3}
-#       tmp <- try(suppressWarnings( uniroot(
-#         function(x) {
-#           term1 <- digamma(k*x) - digamma(x)
-#           return(term1+Elogpi/k)
-#         },
-#         c(lower, upper), extendInt = "yes")$root), T)
-#     }
-#     model$dirichletConcentration0 <- tmp
+    # Elogpi <- sum(digamma(dirichletConcentration) - digamma(sum(dirichletConcentration)))
+    # tmpOld <- model$dirichletConcentration0
+    # jj <- 0
+    # upper <- 1e-2
+    # lower <- 1e-99
+    # while (!is.numeric(tmp)) {
+    #   if (jj > 1000) {
+    #     break
+    #   }
+    #   jj <- jj + 1
+    #   if (jj > 1) {upper <- upper + 1e-3}
+    #   tmp <- try(suppressWarnings( uniroot(
+    #     function(x) {
+    #       term1 <- digamma(k*x) - digamma(x)
+    #       return(term1+Elogpi/k)
+    #     },
+    #     c(lower, upper), extendInt = "yes")$root), T)
+    # }
+    # if (jj > 1000) {
+    #   model$dirichletConcentration0 <- tmpOld
+    #   cat(jj)
+    # } else {
+    #   model$dirichletConcentration0 <- tmp
+    # }
     model$normalMean <- mean(ccfMean)
-    model$invWhishartScale <-mean((ccfMean - normalMean)^2 + ccfCov)
+    model$invWhishartScale <-mean((ccfMean - model$normalMean)^2 + ccfCov)
   }
 
   model$dirichletConcentration <- dirichletConcentration
@@ -636,12 +641,10 @@ GetPurity <- function(mydata) {
 #' @param res Ccube result list
 #' @param myColors colors
 #' @param printPlot output flag
-#' @param icgc icgc path
-#' @param codeName path
-#' @param sampleName sample name
+#' @param fn output file name
 #' @return NULL
 #' @export
-MakeCcubeStdPlot <- function(ssm, res, myColors, printPlot = F, fn = NULL) {
+MakeCcubeStdPlot <- function(ssm, res, myColors=gg_color_hue(10), printPlot = F, fn = NULL) {
 
   if (printPlot) {
     pdf(fn, width=8, height=8)
@@ -810,8 +813,7 @@ RemoveClusterAndReassignVariants <- function(res, removeIdx, ssm) {
 #' Write files in PCAWG-11 formats, works for both CcubeCore and ccube_m6 output
 #' @param ssm data
 #' @param res Ccube result list
-#' @param icgc icgc path
-#' @param codeName path
+#' @param resultsFolder path to file
 #' @param sampleName sample name
 #' @return NULL
 #' @export

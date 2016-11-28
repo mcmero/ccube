@@ -16,5 +16,6 @@ Imports:
     Matrix,
     pracma,
     dplyr,
-    monomvn
+    monomvn,
+    colorspace
 RoxygenNote: 5.0.1

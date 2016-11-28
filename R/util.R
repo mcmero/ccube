@@ -251,7 +251,7 @@ Assign <- function(x, centers, s) {
   logRho <- array(0, dim= c(n ,k))
 
   for (ii in 1:k) {
-    logRho[,ii] = ccube::bsxfun.se("-", -(x-centers[ii])^2/(2*s[ii]), log(s[ii]))
+    logRho[,ii] = bsxfun.se("-", -(x-centers[ii])^2/(2*s[ii]), log(s[ii]))
   }
 
   if (n==k) {
@@ -264,3 +264,11 @@ Assign <- function(x, centers, s) {
   return(list(R=R, logR=logR))
 }
 
+#' Ccube color
+#' @param n of colors
+#' @return colors
+#' @export
+gg_color_hue <- function(n) {
+  colorspace::hues = seq(15, 375, length=n+1)
+  colorspace::hcl(h=hues, l=65, c=100)[1:n]
+}

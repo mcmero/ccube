@@ -4,8 +4,8 @@
 \alias{MakeCcubeStdPlot}
 \title{Make Ccube results plot}
 \usage{
-MakeCcubeStdPlot(ssm, res, myColors, printPlot = F, icgc = NULL,
-  codeName = NULL, sampleName = NULL)
+MakeCcubeStdPlot(ssm, res, myColors = gg_color_hue(10), printPlot = F,
+  fn = NULL)
 }
 \arguments{
 \item{ssm}{data}
@@ -16,11 +16,7 @@ MakeCcubeStdPlot(ssm, res, myColors, printPlot = F, icgc = NULL,
 
 \item{printPlot}{output flag}
 
-\item{icgc}{icgc path}
-
-\item{codeName}{path}
-
-\item{sampleName}{sample name}
+\item{fn}{output file name}
 }
 \description{
 Make Ccube results plot

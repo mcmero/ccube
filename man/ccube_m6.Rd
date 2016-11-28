@@ -4,7 +4,7 @@
 \alias{ccube_m6}
 \title{Run Ccube with model 6: Normal-Binomial}
 \usage{
-ccube_m6(mydata, epi = 0.001, init = 2, prior, tol = 1e-20,
+ccube_m6(mydata, epi = 0.001, init = 2, prior = NULL, tol = 1e-20,
   maxiter = 1000, fit_mult = F, fit_hyper = T, use = c("use_base",
   "use_one"), verbose = FALSE)
 }

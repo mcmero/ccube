@@ -4,16 +4,14 @@
 \alias{WritePcawgFormats}
 \title{Write files in PCAWG-11 formats, works for both CcubeCore and ccube_m6 output}
 \usage{
-WritePcawgFormats(ssm, res, icgc, codeName, sampleName)
+WritePcawgFormats(ssm, res, resultsFolder, sampleName)
 }
 \arguments{
 \item{ssm}{data}
 
 \item{res}{Ccube result list}
 
-\item{icgc}{icgc path}
-
-\item{codeName}{path}
+\item{resultsFolder}{path to file}
 
 \item{sampleName}{sample name}
 }
