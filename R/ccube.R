@@ -641,12 +641,9 @@ GetPurity <- function(mydata) {
 #' @param sampleName sample name
 #' @return NULL
 #' @export
-MakeCcubeStdPlot <- function(ssm, res, myColors, printPlot = F, icgc = NULL, codeName = NULL, sampleName= NULL) {
+MakeCcubeStdPlot <- function(ssm, res, myColors, printPlot = F, fn = NULL) {
 
   if (printPlot) {
-    resultsFolder <- paste0(icgc, codeName, sampleName)
-    fn = paste0(resultsFolder, "/",
-                sampleName, "_results_summary.pdf")
     pdf(fn, width=8, height=8)
   }
 
@@ -818,10 +815,9 @@ RemoveClusterAndReassignVariants <- function(res, removeIdx, ssm) {
 #' @param sampleName sample name
 #' @return NULL
 #' @export
-WritePcawgFormats <- function(ssm, res, icgc, codeName, sampleName) {
+WritePcawgFormats <- function(ssm, res, resultsFolder, sampleName) {
   ## output calibration format
   uniqLabels <- unique(res$label)
-  resultsFolder <- paste0(icgc, codeName, sampleName)
   dir.create(resultsFolder, recursive = T)
 
   id <- Reduce(rbind, strsplit(as.character(ssm$gene), "_", fixed = T), c())
