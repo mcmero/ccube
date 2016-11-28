@@ -286,8 +286,11 @@ GetCcf <- function(mydata, use = c("use_base", "use_one")) {
 
     mydata <- dplyr::mutate(dplyr::rowwise(mydata), ccf = mean(c(ccf1, ccf2, ccf3), na.rm = T))
     dd <- dplyr::filter(mydata, ccf1 != ccf2 | ccf1 != ccf3 | ccf2 != ccf3)
-    dd <- dplyr::mutate(dplyr::rowwise(dd), ccf = min(c(ccf1, ccf2, ccf3), na.rm = T ))
-    mydata[mydata$mutation_id %in% dd$mutation_id,]$ccf = dd$ccf
+
+    if (nrow(dd) > 0) {
+      dd <- dplyr::mutate(dplyr::rowwise(dd), ccf = min(c(ccf1, ccf2, ccf3), na.rm = T ))
+      mydata[mydata$mutation_id %in% dd$mutation_id,]$ccf = dd$ccf
+    }
 
     mydata <- dplyr::mutate(dplyr::rowwise(mydata),
                             mult = GetMult(c(ccf1, ccf2, ccf3),
