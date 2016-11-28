@@ -269,6 +269,6 @@ Assign <- function(x, centers, s) {
 #' @return colors
 #' @export
 gg_color_hue <- function(n) {
-  colorspace::hues = seq(15, 375, length=n+1)
-  colorspace::hcl(h=hues, l=65, c=100)[1:n]
+  hues = seq(15, 375, length=n+1)
+  hcl(h=hues, l=65, c=100)[1:n]
 }
