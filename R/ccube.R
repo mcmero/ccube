@@ -757,6 +757,8 @@ CullEmptyCluster <- function(res) {
 
 #' Remove a (or more) nonempty cluster then reassign its data
 #' @param res Ccube result list
+#' @param  removeIdx clusters to remove
+#' @param ssm data
 #' @return Ccube result list
 #' @export
 RemoveClusterAndReassignVariants <- function(res, removeIdx, ssm) {

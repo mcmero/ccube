@@ -8,6 +8,10 @@ RemoveClusterAndReassignVariants(res, removeIdx, ssm)
 }
 \arguments{
 \item{res}{Ccube result list}
+
+\item{removeIdx}{clusters to remove}
+
+\item{ssm}{data}
 }
 \value{
 Ccube result list
