@@ -2,9 +2,9 @@
 % Please edit documentation in R/ccube.R
 \name{RemoveClusterAndReassignVariants}
 \alias{RemoveClusterAndReassignVariants}
-\title{Remove a (or more) nonempty cluster then reassign its data}
+\title{Remove a (or more) cluster and reassign its data if the cluster is nonempty}
 \usage{
-RemoveClusterAndReassignVariants(res, removeIdx, ssm)
+RemoveClusterAndReassignVariants(res, removeIdx, label = NULL, ssm = NULL)
 }
 \arguments{
 \item{res}{Ccube result list}
@@ -17,6 +17,6 @@ RemoveClusterAndReassignVariants(res, removeIdx, ssm)
 Ccube result list
 }
 \description{
-Remove a (or more) nonempty cluster then reassign its data
+Remove a (or more) cluster and reassign its data if the cluster is nonempty
 }
 

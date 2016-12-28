@@ -150,6 +150,13 @@ logmvgamma <- function(x, d) {
   y
 }
 
+logChoose <- function(n, k) {
+  return(
+    lgamma(n + 1) - lgamma(k+1) - lgamma(n-k+1)
+  )
+}
+
+
 #' Parse old cnv_data.txt files
 #' @param ssm ssms
 #' @param cnv copy number
@@ -204,6 +211,41 @@ ParseSnvCnaOld <- function (ssm, cnv) {
   return(ssm)
 }
 
+#' Parse PCAWG-11 cna format
+#' @param ssm ssms
+#' @param cnv copy number
+#' @return ccube data frame
+#' @export
+ParseSnvCnaPcawg11Format <- function (ssm, cnv) {
+
+  id <- Reduce(rbind, strsplit(as.character(ssm$gene), "_", fixed = T), c())
+  ssm$chr = as.integer(id[,1])
+  ssm$pos = as.integer(id[,2])
+  ssm$mu_r <- NULL
+  ssm$mu_v <- NULL
+  ssm$cn_ref <- NULL
+  ssm$cn_tot <- NULL
+  ssm$cn_frac = NA
+  ssm$major_cn = NA
+  ssm$minor_cn = NA
+
+  for (jj in seq_len(nrow(cnv)) ) {
+    cc = cnv[jj,]
+    tmp = dplyr::filter(rowwise(ssm), chr == cc$chromosome &  (pos >= cc$start & pos <= cc$end))
+    if (nrow(tmp) > 0) {
+      idx <- which(ssm$id %in% tmp$id)
+      ssm[idx, ]$major_cn <- cc$major_cn
+      ssm[idx, ]$minor_cn <- cc$minor_cn
+      ssm[idx, ]$cn_frac <- cc$ccf
+    }
+  }
+  ssm$chr <-NULL
+  ssm$pos <-NULL
+  ssm <- dplyr::filter(ssm, !is.na(major_cn) & !is.na(minor_cn) & !is.na(cn_frac))
+  return(ssm)
+  return(ssm)
+}
+
 #' Parse new consensus files
 #' @param ssm ssms
 #' @param cnv copy number
@@ -222,7 +264,6 @@ ParseSnvCnaPreConsensus <- function(ssm, cnv) {
   ssm$major_cn = NA
   ssm$minor_cn = NA
   ssm$star = NA
-  # (pos >= cnv[jj,]$start & pos <= cnv[jj,]$end)
   for (jj in seq_len(nrow(cnv)) ) {
     cc = cnv[jj,]
     tmp = dplyr::filter(rowwise(ssm), chr == cc$chromosome &  (pos >= cc$start & pos <= cc$end))

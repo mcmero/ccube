@@ -1,7 +1,7 @@
 ############ Sort the model  ############
 # Sort model paramters in increasing order of averaged means
 # of d variables
-sort_components <- function(model) {
+SortClusters <- function(model) {
 
   idx <- order(apply(model$ccfMean, 2, mean))
 
@@ -16,13 +16,6 @@ sort_components <- function(model) {
   model$dirichletConcentration <- model$dirichletConcentration[idx]
 
   model
-}
-
-
-logChoose <- function(n, k) {
-  return(
-    lgamma(n + 1) - lgamma(k+1) - lgamma(n-k+1)
-         )
 }
 
 #' Run Ccube with model 6: Normal-Binomial
@@ -103,7 +96,7 @@ ccube_m6 <- function(mydata, epi=1e-3, init=2, prior=NULL, tol=1e-20, maxiter=1e
 		model <- VariationalMaximimizationStep(bn, dn, cn, cr, major_cn, epi, purity, model,
 		                                       fit_mult = fit_mult, fit_hyper = fit_hyper)
 		model <- VarationalExpectationStep(bn, dn, cn, cr, epi, purity, model)
-		L[vbiter] <- variationalLowerBound(bn, dn, cn, cr, epi, purity, model)/n
+		L[vbiter] <- VariationalLowerBound(bn, dn, cn, cr, epi, purity, model)/n
 		converged <- abs(L[vbiter] - L[vbiter-1]) < (tol) * abs(L[vbiter])
 		degenerated <- (L[vbiter] - L[vbiter-1]) < 0
 		#degenerated = F
@@ -112,7 +105,7 @@ ccube_m6 <- function(mydata, epi=1e-3, init=2, prior=NULL, tol=1e-20, maxiter=1e
 
 	L <- L[2:vbiter]
 
-	model <- sort_components(model)
+	model <- SortClusters(model)
 
 	if (init > 1) {
 	  label <- rep(0, n)
@@ -212,7 +205,7 @@ CcubeCore <- function(mydata, epi=1e-3, init=2, prior, tol=1e-20, maxiter=1e3, f
     model <- VariationalMaximimizationStep(bn, dn, cn, cr, major_cn, epi, purity, model,
                                            fit_mult = fit_mult, fit_hyper = fit_hyper)
     model <- VarationalExpectationStep(bn, dn, cn, cr, epi, purity, model)
-    L[vbiter] <- variationalLowerBound(bn, dn, cn, cr, epi, purity, model)/n
+    L[vbiter] <- VariationalLowerBound(bn, dn, cn, cr, epi, purity, model)/n
     converged <- abs(L[vbiter] - L[vbiter-1]) < (tol) * abs(L[vbiter])
     degenerated <- (L[vbiter] - L[vbiter-1]) < 0
     #degenerated = F
@@ -221,7 +214,7 @@ CcubeCore <- function(mydata, epi=1e-3, init=2, prior, tol=1e-20, maxiter=1e3, f
 
   L <- L[2:vbiter]
 
-  model <- sort_components(model)
+  model <- SortClusters(model)
 
   if (init > 1) {
     label <- rep(0, n)
@@ -347,7 +340,7 @@ initialization <- function(X, init, prior) {
   }
   R <- as.matrix(Matrix::sparseMatrix(1:n, label, x=1))
   invWhishartScale <- prior$invWhishartScale
-  ccfMean = normalMean
+  ccfMean = unname(normalMean)
   ccfCov = array(invWhishartScale, dim = c(d,k))
 
   return(list(R = R,
@@ -525,7 +518,7 @@ VarationalExpectationStep <- function(bn, dn, cn, cr, epi, purity, model, no.wei
 
 
 ############ Variational-(lower)-Bound Evaluation ############
-variationalLowerBound <- function(bn, dn, cn, cr, epi, purity, model) {
+VariationalLowerBound <- function(bn, dn, cn, cr, epi, purity, model) {
 
   bv <- model$bv
   dirichletConcentration0 <- model$dirichletConcentration0
@@ -618,7 +611,7 @@ GetPurity <- function(mydata) {
   }
   tmpdata <- dplyr::mutate(dplyr::rowwise(tmpdata), ploidy = major_cn + minor_cn)
   tmpdata <- dplyr::mutate(tmpdata, vaf = var_counts/(var_counts+ref_counts))
-  tmpdata <- dplyr::mutate(dplyr::rowwise(tmpdata), cp = vtox(vaf, 2,0,ploidy/2,ploidy/2))
+  tmpdata <- dplyr::mutate(dplyr::rowwise(tmpdata), cp = vtox(vaf, 2, 0, ploidy/2, ploidy/2))
   tmpdata <- dplyr::filter(tmpdata, !is.infinite(cp) & !is.na(cp))
   K = 6
   if (K >= nrow(tmpdata)) {
@@ -726,90 +719,102 @@ CheckEmptyCluster <- function (res) {
 #' @export
 CullEmptyCluster <- function(res) {
 
-  uniqLabels <- unique(res$label)
-
-  idx <- sort(uniqLabels)
-
-  if (!is.nul(res$R)) {
-    res$R=res$R[, idx]
-  }
-
-  if (!is.nul(res$mu)) {
-    res$mu=res$mu[, idx]
-  }
-
-  res$full.model$ccfMean <- res$full.model$ccfMean[, idx]
-
-  res$full.model$ccfCov <- res$full.model$ccfCov[,idx]
-
-  res$full.model$logResponsibility <- logsumexp(res$full.model$logResponsibility[, idx])
-
-  res$full.model$responsibility <- exp(res$full.model$logResponsibility)
-
-  res$full.model$dirichletConcentration <- res$full.model$dirichletConcentration[idx]
-
-  res$full.model$normalMean <- res$full.model$normalMean[idx]
-
-  res$full.model$invWhishartScale <- res$full.model$invWhishartScale[idx]
-
-  if (! is.null(res$full.model$Epi)) {
-    res$full.model$Epi <- res$full.model$Epi[idx]/sum(res$full.model$Epi[idx])
-  }
-  res
+  RemoveClusterAndReassignVariants(res,
+                                   which(! seq_along(res$full.model$ccfMean) %in% unique(res$label) ))
 }
 
-#' Remove a (or more) nonempty cluster then reassign its data
+#' Remove a (or more) cluster and reassign its data if the cluster is nonempty
 #' @param res Ccube result list
 #' @param  removeIdx clusters to remove
 #' @param ssm data
 #' @return Ccube result list
 #' @export
-RemoveClusterAndReassignVariants <- function(res, removeIdx, ssm) {
+RemoveClusterAndReassignVariants <- function(res, removeIdx, label = NULL, ssm = NULL) {
 
-  uniqLabels <- sort(unique(res$label))
+  stopifnot( !is.null(res$label) & is.null(label) )
+
+  if (!is.null(res$label)) {
+    uniqLabels <- sort(unique(res$label))
+
+  } else {
+    uniqLabels <- sort(unique(label))
+  }
+
+  remainedLabels <- uniqLabels[which(!uniqLabels %in% removeIdx)]
   uniqLabels[ which(uniqLabels %in% removeIdx) ] <- NA
   newLabels <- match(res$label, uniqLabels)
   reassignIdx <- which(is.na(newLabels))
   reassignSsm <- ssm[reassignIdx, ]
 
-  res$full.model$ccfMean <- res$full.model$ccfMean[-removeIdx]
-  res$full.model$ccfCov <- res$full.model$ccfCov[-removeIdx]
+  if (! is.null(res$full.model) ) {
+    res$full.model$ccfMean <- res$full.model$ccfMean[-removeIdx]
+    res$full.model$ccfCov <- res$full.model$ccfCov[-removeIdx]
 
-  if(length(reassignIdx) >0) {
-    Assign(ssm[reassignIdx] )
-  }
+    logRho <- res$full.model$logResponsibility[, -removeIdx]
 
-  if (!is.null(res$R)) {
-    res$R=res$R[, idx]
-  }
-
-  if (!is.null(res$mu)) {
-    res$mu=res$mu[idx]
-  }
-
-
-
-  res$full.model$logResponsibility <-
-    if (length(res$label) ==length(res$full.model$ccfMean)) {
-      bsxfun.se("-", logRho, logsumexp(logRho, 1), expandByRow = F)	# 10.49
-    } else {
-      bsxfun.se("-", logRho, logsumexp(logRho, 1))	# 10.49
+    if (!is.matrix(logRho)) {
+      logRho <- as.matrix(logRho)
     }
-  res$full.model$responsibility <- exp(res$full.model$logResponsibility)
 
-  res$full.model$dirichletConcentration <- res$full.model$dirichletConcentration[idx]
+    res$full.model$logResponsibility <-
+      if (length(res$label) ==length(res$full.model$ccfMean)) {
+        bsxfun.se("-", logRho, logsumexp(logRho, 1), expandByRow = F)	# 10.49
+      } else {
+        bsxfun.se("-", logRho, logsumexp(logRho, 1))	# 10.49
+      }
 
-  res$full.model$normalMean <- res$full.model$normalMean[idx]
+    if(!is.null(ssm) & length(reassignIdx) >0) {
+      reassignList <- Assign(reassignSsm$ccube_ccf, res$full.model$ccfMean, res$full.model$ccfCov)
+      res$full.model$logResponsibility[reassignIdx, ] <- reassignList$logR
+    }
 
-  res$full.model$invWhishartScale <- res$full.model$invWhishartScale[idx]
+    res$full.model$responsibility <- exp(res$full.model$logResponsibility)
 
-  if (! is.null(res$full.model$Epi)) {
-    res$full.model$Epi <- res$full.model$Epi[idx]/sum(res$full.model$Epi[idx])
+    res$label <- apply(res$full.model$responsibility, 1, which.max)
+
+    res$full.model$dirichletConcentration <- res$full.model$dirichletConcentration0 + colSums(res$full.model$responsibility)
+
+    if (!is.null(res$R)) {
+      res$R=res$full.model$responsibility
+    }
+
+    if (!is.null(res$mu)) {
+      res$mu=res$full.model$ccfMean
+    }
+    if (! is.null(res$full.model$Epi)) {
+      Epi <- (res$full.model$dirichletConcentration + colSums(res$full.model$responsibility)) /
+        (length(res$full.model$ccfMean) * res$full.model$dirichletConcentration0 + length(res$label))
+      res$full.model$Epi <- Epi/sum(Epi)
+    }
+  } else {
+
+    res$ccfMean <- res$ccfMean[-removeIdx]
+    res$ccfCov <- res$ccfCov[-removeIdx]
+
+    logRho <- res$logResponsibility[, -removeIdx]
+
+    if (!is.matrix(logRho)) {
+      logRho <- as.matrix(logRho)
+    }
+
+    res$logResponsibility <-
+      if (length(label) ==length(res$ccfMean)) {
+        bsxfun.se("-", logRho, logsumexp(logRho, 1), expandByRow = F)	# 10.49
+      } else {
+        bsxfun.se("-", logRho, logsumexp(logRho, 1))	# 10.49
+      }
+
+    if(!is.null(ssm) & length(reassignIdx) >0) {
+      reassignList <- Assign(reassignSsm$ccube_ccf, res$ccfMean, res$ccfCov)
+      res$logResponsibility[reassignIdx, ] <- reassignList$logR
+    }
+
+    res$responsibility <- exp(res$logResponsibility)
+
+    res$dirichletConcentration <- res$dirichletConcentration0 + colSums(res$responsibility)
   }
+
   res
-
-
-
 }
 
 
@@ -820,7 +825,7 @@ RemoveClusterAndReassignVariants <- function(res, removeIdx, ssm) {
 #' @param sampleName sample name
 #' @return NULL
 #' @export
-WritePcawgFormats <- function(ssm, res, resultsFolder, sampleName) {
+WritePcawgFormats <- function(ssm, res, resultsFolder, sampleName, selectOutPut = F) {
   ## output calibration format
   uniqLabels <- unique(res$label)
   dir.create(resultsFolder, recursive = T)
@@ -836,8 +841,9 @@ WritePcawgFormats <- function(ssm, res, resultsFolder, sampleName) {
   write.table(mult, file = fn, sep = "\t", row.names = F, quote = F)
   shellCommand <- paste0("gzip -f ", fn)
   system(shellCommand, intern = TRUE)
+  rm(mult)
 
-  # Assignment
+  # Assignment Prob
   mutAssign <- data.frame(chr = id[,1], pos = id[,2])
 
   if (length(uniqLabels) == 1) {
@@ -854,8 +860,23 @@ WritePcawgFormats <- function(ssm, res, resultsFolder, sampleName) {
   write.table(mutAssign, file = fn, sep = "\t", row.names = F, quote = F)
   shellCommand <- paste0("gzip -f ", fn)
   system(shellCommand, intern = TRUE)
+  rm(mutR, mutAssign)
 
-  # structure
+  # Assignment
+  mutAssign <- data.frame(chr = id[,1], pos = id[,2])
+  if (length(uniqLabels) == 1) {
+    mutAssign$cluster = 1
+  } else {
+    mutAssign$cluster <- apply(res$full.model$responsibility, 1, which.max)
+  }
+  fn <- paste0(resultsFolder, "/",
+               sampleName, "_mutation_assignments.txt")
+  write.table(mutAssign, file = fn, sep = "\t", row.names = F, quote = F)
+  shellCommand <- paste0("gzip -f ", fn)
+  system(shellCommand, intern = TRUE)
+  rm(mutAssign)
+
+  # subclonal structure
   cellularity <- unique(ssm$purity)
   clusterCertainty <- as.data.frame(table(res$label), stringsAsFactors = F)
   clusterCertainty <- rename(clusterCertainty, cluster = Var1, n_ssms = Freq)
@@ -867,5 +888,85 @@ WritePcawgFormats <- function(ssm, res, resultsFolder, sampleName) {
   shellCommand <- paste0("gzip -f ", fn)
   system(shellCommand, intern = TRUE)
 
+  # ccm
+  coClustMat <- tcrossprod(res$full.model$responsibility)
+  diag(coClustMat) <- 1
+  fn = paste0(resultsFolder, "/", sampleName, "_coassignment_probabilities.txt")
+  write.table(coClustMat, file = fn, sep = "\t", col.names = F, row.names = F, quote = F )
+  shellCommand <- paste0("gzip -f ", fn)
+  system(shellCommand, intern = TRUE)
+  rm(coClustMat)
+
+  indexFile <- cbind(id[,1], id[, 2], seq_along(id[,1]))
+  colnames(indexFile) <- c("chr", "pos", "col")
+
+  fn = paste0(resultsFolder, "/", sampleName, "_index.txt")
+  write.table(indexFile, file = fn, sep = "\t", row.names = F, quote = F )
+  shellCommand <- paste0("gzip -f ", fn)
+  system(shellCommand, intern = TRUE)
+
 }
 
+#' Run Ccube analysis
+RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder = NULL,
+                             runParser = F, runAnalysis = F, runQC = F, runAnalysisSnap = F,
+                             numOfClusterPool = NULL, numOfRepeat = NULL,
+                             epi = 1e-3, tol = 1e-8, maxiter = 1e3,
+                             multiCore = T){
+
+  if (runParser) {
+
+  }
+
+
+  if (runAnalysis) {
+
+    if (runAnalysisSnap) {
+      iterSetting <- 10
+    } else {
+      iterSetting <- sort(rep(numOfClusterPool, numOfRepeat))
+
+    }
+
+
+    if (multiCore & ! runAnalysisSnap) {
+      results <- foreach(n = seq_along(iterSetting), .combine = c, .packages = "ccube") %dopar%
+      {
+        k <- iterSetting[n]
+        list(CcubeCore(ssm, epi=1e-3,
+                      init=k, tol = 1e-8, maxiter = 1e3,
+                      fit_mult = T, fit_hyper = T, use = "use_base", verbose = F))
+      }
+    }else {
+      results <- foreach(n = seq_along(iterSetting), .combine = c, .packages = "ccube") %do%
+      {
+        k <- iterSetting[n]
+        list(CcubeCore(ssm, epi=1e-3,
+                      init=k, tol = 1e-8, maxiter = 1e3,
+                      fit_mult = T, fit_hyper = T, use = "use_base", verbose = F))
+      }
+    }
+
+
+    maxLbIndex <- which.max(Map( function(x) max(x$L), results))
+    lb <- unlist(Map( function(x) max(x$L), results))
+    res <- results[[maxLbIndex]]
+    ssm$ccube_ccf_mean <- res$full.model$ccfMean[res$label]
+    ssm$ccube_mult <- res$full.model$bv
+    ssm <- mutate(rowwise(ssm),
+                  vaf = var_counts/(var_counts+ref_counts),
+                  ccube_ccf = MapVaf2CcfPyClone(vaf,
+                                                purity,
+                                                normal_cn,
+                                                major_cn + minor_cn,
+                                                major_cn + minor_cn,
+                                                ccube_mult,
+                                                constraint=F) )
+  }
+
+
+  if (runQC) {
+
+  }
+
+}
