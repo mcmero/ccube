@@ -1244,12 +1244,17 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
   }
 
   if (runQC) {
-    load(ccubeResultRDataFile)
 
+    if (!is.null(ccubeResultRDataFile) ) {
+      if (file.exists(ccubeResultRDataFile)) {
+        load(ccubeResultRDataFile)
+        sortedIdx <- sort(lb, decreasing = T, index.return = T)$ix
+      }
+    }
     # Check for clonal cluster
     foundDiffRes <- F
     if (! HasClonalCluster(res) ) {
-      for (ii in sortedIdx[-1]) {
+      for (ii in sortedIdx) {
         rr <- results[[ii]]
         if (HasClonalCluster(rr)) {
           foundDiffRes <- T
@@ -1306,6 +1311,7 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
     # summary graph
     fn <- paste0(resultsFolder, "/", sampleName, "_results_summary.pdf")
     MakeCcubeStdPlot(ssm = ssm, res = res, printPlot = T, fn = fn)
+
   }
 
 }
