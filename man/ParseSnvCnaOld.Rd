@@ -2,19 +2,19 @@
 % Please edit documentation in R/util.R
 \name{ParseSnvCnaOld}
 \alias{ParseSnvCnaOld}
-\title{Parse old cnv_data.txt files}
+\title{Parse old cna_data.txt files}
 \usage{
-ParseSnvCnaOld(ssm, cnv)
+ParseSnvCnaOld(ssm, cna)
 }
 \arguments{
 \item{ssm}{ssms}
 
-\item{cnv}{copy number}
+\item{cna}{copy number}
 }
 \value{
 ccube data frame
 }
 \description{
-Parse old cnv_data.txt files
+Parse old cna_data.txt files
 }
 

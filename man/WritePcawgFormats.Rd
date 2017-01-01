@@ -4,7 +4,10 @@
 \alias{WritePcawgFormats}
 \title{Write files in PCAWG-11 formats, works for both CcubeCore and ccube_m6 output}
 \usage{
-WritePcawgFormats(ssm, res, resultsFolder, sampleName)
+WritePcawgFormats(ssm, res, resultsFolder, sampleName, allFormats = F,
+  basicFormats = T, outputMult = F, outputAssignProb = F,
+  outputAssign = F, outputSubStruct = F, outputCcm = F,
+  outputCcmIdx = F)
 }
 \arguments{
 \item{ssm}{data}

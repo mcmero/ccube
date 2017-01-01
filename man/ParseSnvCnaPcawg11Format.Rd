@@ -4,12 +4,12 @@
 \alias{ParseSnvCnaPcawg11Format}
 \title{Parse PCAWG-11 cna format}
 \usage{
-ParseSnvCnaPcawg11Format(ssm, cnv)
+ParseSnvCnaPcawg11Format(ssm, cna)
 }
 \arguments{
 \item{ssm}{ssms}
 
-\item{cnv}{copy number}
+\item{cna}{copy number profile}
 }
 \value{
 ccube data frame

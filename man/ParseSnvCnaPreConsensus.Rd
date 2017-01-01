@@ -4,12 +4,12 @@
 \alias{ParseSnvCnaPreConsensus}
 \title{Parse new consensus files}
 \usage{
-ParseSnvCnaPreConsensus(ssm, cnv)
+ParseSnvCnaPreConsensus(ssm, cna)
 }
 \arguments{
 \item{ssm}{ssms}
 
-\item{cnv}{copy number}
+\item{cna}{copy number}
 }
 \value{
 ccube data frame

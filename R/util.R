@@ -157,12 +157,12 @@ logChoose <- function(n, k) {
 }
 
 
-#' Parse old cnv_data.txt files
+#' Parse old cna_data.txt files
 #' @param ssm ssms
-#' @param cnv copy number
+#' @param cna copy number
 #' @return ccube data frame
 #' @export
-ParseSnvCnaOld <- function (ssm, cnv) {
+ParseSnvCnaOld <- function (ssm, cna) {
   ssm$major_cn = 1
   ssm$minor_cn = 1
   ssm$cn_frac = 1
@@ -171,31 +171,31 @@ ParseSnvCnaOld <- function (ssm, cnv) {
   ssm$cn_ref <- NULL
   ssm$cn_tot <- NULL
 
-  cnv <- na.omit(cnv)
-  cnv <- dplyr::filter(cnv, ssms!="" )
+  cna <- na.omit(cna)
+  cna <- dplyr::filter(cna, ssms!="" )
 
-  if (nrow(cnv)>0) {
-    cnvtmp1 <- strsplit(as.character(cnv$ssms), ";")
-    for (j in seq_len(nrow(cnv))) {
-      if (length(cnvtmp1[[j]])==0) { next }
-      cnvtmp1[[j]] = paste(cnvtmp1[[j]], cnv[j,]$frac, sep="," )
+  if (nrow(cna)>0) {
+    cnatmp1 <- strsplit(as.character(cna$ssms), ";")
+    for (j in seq_len(nrow(cna))) {
+      if (length(cnatmp1[[j]])==0) { next }
+      cnatmp1[[j]] = paste(cnatmp1[[j]], cna[j,]$frac, sep="," )
     }
-    cnvtmp1 <- unlist(cnvtmp1)
-    cnvtmp2 <- Reduce(
-      rbind, strsplit(cnvtmp1, ",")
+    cnatmp1 <- unlist(cnatmp1)
+    cnatmp2 <- Reduce(
+      rbind, strsplit(cnatmp1, ",")
     )
 
-    if (is.null(dim(cnvtmp2) )) {
-      cnvtmp2 = as.data.frame(t(cnvtmp2), stringsAsFactors=F)
+    if (is.null(dim(cnatmp2) )) {
+      cnatmp2 = as.data.frame(t(cnatmp2), stringsAsFactors=F)
     } else {
-      cnvtmp2 = as.data.frame(cnvtmp2, stringsAsFactors=F)
+      cnatmp2 = as.data.frame(cnatmp2, stringsAsFactors=F)
     }
 
-    for (j in 2:ncol(cnvtmp2)) {
-      cnvtmp2[,j] = as.numeric(cnvtmp2[,j])
+    for (j in 2:ncol(cnatmp2)) {
+      cnatmp2[,j] = as.numeric(cnatmp2[,j])
     }
 
-    ssm <- dplyr::left_join(ssm, cnvtmp2, by=c("id"="V1"))
+    ssm <- dplyr::left_join(ssm, cnatmp2, by=c("id"="V1"))
     ssm$major_cn <- ssm$V3
     ssm$minor_cn <- ssm$V2
     ssm$cn_frac <- ssm$V4
@@ -213,10 +213,10 @@ ParseSnvCnaOld <- function (ssm, cnv) {
 
 #' Parse PCAWG-11 cna format
 #' @param ssm ssms
-#' @param cnv copy number
+#' @param cna copy number profile
 #' @return ccube data frame
 #' @export
-ParseSnvCnaPcawg11Format <- function (ssm, cnv) {
+ParseSnvCnaPcawg11Format <- function (ssm, cna) {
 
   id <- Reduce(rbind, strsplit(as.character(ssm$gene), "_", fixed = T), c())
   ssm$chr = as.integer(id[,1])
@@ -229,8 +229,8 @@ ParseSnvCnaPcawg11Format <- function (ssm, cnv) {
   ssm$major_cn = NA
   ssm$minor_cn = NA
 
-  for (jj in seq_len(nrow(cnv)) ) {
-    cc = cnv[jj,]
+  for (jj in seq_len(nrow(cna)) ) {
+    cc = cna[jj,]
     tmp = dplyr::filter(rowwise(ssm), chr == cc$chromosome &  (pos >= cc$start & pos <= cc$end))
     if (nrow(tmp) > 0) {
       idx <- which(ssm$id %in% tmp$id)
@@ -241,17 +241,17 @@ ParseSnvCnaPcawg11Format <- function (ssm, cnv) {
   }
   ssm$chr <-NULL
   ssm$pos <-NULL
-  ssm <- dplyr::filter(ssm, !is.na(major_cn) & !is.na(minor_cn) & !is.na(cn_frac))
+  ssm <- dplyr::filter(ssm, !is.na(major_cn) & !is.na(minor_cn) & !is.na(cn_frac) & major_cn > 0)
   return(ssm)
   return(ssm)
 }
 
 #' Parse new consensus files
 #' @param ssm ssms
-#' @param cnv copy number
+#' @param cna copy number
 #' @return ccube data frame
 #' @export
-ParseSnvCnaPreConsensus <- function(ssm, cnv) {
+ParseSnvCnaPreConsensus <- function(ssm, cna) {
 
   id <- Reduce(rbind, strsplit(as.character(ssm$gene), "_", fixed = T), c())
   ssm$chr = as.integer(id[,1])
@@ -264,8 +264,8 @@ ParseSnvCnaPreConsensus <- function(ssm, cnv) {
   ssm$major_cn = NA
   ssm$minor_cn = NA
   ssm$star = NA
-  for (jj in seq_len(nrow(cnv)) ) {
-    cc = cnv[jj,]
+  for (jj in seq_len(nrow(cna)) ) {
+    cc = cna[jj,]
     tmp = dplyr::filter(rowwise(ssm), chr == cc$chromosome &  (pos >= cc$start & pos <= cc$end))
     if (nrow(tmp) > 0) {
       idx <- which(ssm$id %in% tmp$id)
@@ -276,7 +276,7 @@ ParseSnvCnaPreConsensus <- function(ssm, cnv) {
   }
   ssm$chr <-NULL
   ssm$pos <-NULL
-  ssm <- dplyr::filter(ssm, !is.na(major_cn) & !is.na(minor_cn) & !is.na(star))
+  ssm <- dplyr::filter(ssm, !is.na(major_cn) & !is.na(minor_cn) & !is.na(star) & major_cn > 0)
   return(ssm)
 }
 

@@ -5,9 +5,49 @@
 \title{Run Ccube analysis}
 \usage{
 RunCcubePipeline(sampleName = NULL, dataFolder = NULL,
-  resultFolder = NULL, runParser = F, runAnalysis = F, runQC = F,
-  runAnalysisSnap = F, numOfClusterPool = NULL, numOfRepeat = NULL,
-  epi = 0.001, tol = 1e-08, maxiter = 1000, multiCore = T)
+  resultFolder = NULL, runParser = F, variantCaller = NULL,
+  cnaCaller = NULL, runAnalysis = F, runQC = F, runAnalysisSnap = F,
+  writeOutput = F, vcfFile = NULL, copyNumberFile = NULL, purity = NA,
+  numOfClusterPool = NULL, numOfRepeat = NULL, epi = 0.001, tol = 1e-08,
+  maxiter = 1000, multiCore = F, ccubeInputRDataFile = NULL,
+  ccubeResultRDataFile = NULL, maxSnv = 50000)
+}
+\arguments{
+\item{sampleName}{sample name}
+
+\item{dataFolder}{path to data folder that stores tmp result files}
+
+\item{resultFolder}{path to output formats files}
+
+\item{runParser}{run parser}
+
+\item{runAnalysis}{run analysis}
+
+\item{runQC}{run QC}
+
+\item{runAnalysisSnap}{run a lite version of the main analysis}
+
+\item{vcfFile}{path to vcf file}
+
+\item{copyNumberFile}{path to copy number file}
+
+\item{purity}{estimated purity of the sample}
+
+\item{numOfClusterPool}{candidates of number of clusters}
+
+\item{numOfRepeat}{number of repeat runs for each candidate number of clusters}
+
+\item{epi}{sequencing error}
+
+\item{tol}{convergence thershold}
+
+\item{maxiter}{maximum iteration}
+
+\item{multiCore}{use multiple cores for repeated runs}
+
+\item{ccubeInputRDataFile}{path to Ccube input Rdata}
+
+\item{ccubeResultRDataFile}{path to Ccube result Rdata}
 }
 \description{
 Run Ccube analysis
