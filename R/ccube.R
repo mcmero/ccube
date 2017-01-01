@@ -1208,7 +1208,12 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
   }
 
   if (runAnalysis) {
-    load(ccubeInputRDataFile)
+
+    if (!is.null(ccubeInputRDataFile) ) {
+      if (file.exists(ccubeInputRDataFile)) {
+        load(ccubeInputRDataFile)
+      }
+    }
 
     # filtering
     ssm <- dplyr::filter(ssm, major_cn > 0)
@@ -1301,7 +1306,7 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
                                                 constraint=F) )
 
     # write Ccube results Rdata
-    if (! is.nul(ccubeResultRDataFile) ) {
+    if (! is.null(ccubeResultRDataFile) ) {
       fn <-  ccubeResultRDataFile
     } else {
       fn <- paste0(dataFolder,
