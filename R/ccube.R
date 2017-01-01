@@ -975,11 +975,11 @@ RemoveClusterAndReassignVariantsWithEstep <- function(res, removeIdx, ssm = NULL
 #' Write files in PCAWG-11 formats, works for both CcubeCore and ccube_m6 output
 #' @param ssm data
 #' @param res Ccube result list
-#' @param resultsFolder path to file
+#' @param resultFolder path to file
 #' @param sampleName sample name
 #' @return NULL
 #' @export
-WritePcawgFormats <- function(ssm, res, resultsFolder, sampleName,
+WritePcawgFormats <- function(ssm, res, resultFolder, sampleName,
                               allFormats = F, basicFormats = T,
                               outputMult = F, outputAssignProb = F, outputAssign = F,
                               outputSubStruct = F, outputCcm = F, outputCcmIdx = F) {
@@ -1000,7 +1000,7 @@ WritePcawgFormats <- function(ssm, res, resultsFolder, sampleName,
 
   ## output calibration format
   uniqLabels <- unique(res$label)
-  dir.create(resultsFolder, recursive = T)
+  dir.create(resultFolder, recursive = T)
 
   id <- Reduce(rbind, strsplit(as.character(ssm$gene), "_", fixed = T), c())
 
@@ -1009,7 +1009,7 @@ WritePcawgFormats <- function(ssm, res, resultsFolder, sampleName,
     mult <- data.frame(chr = id[,1], pos = id[,2])
     mult$tumour_copynumber <- ssm$major_cn+ssm$minor_cn
     mult$multiplicity <- ssm$ccube_mult
-    fn <- paste0(resultsFolder, "/",
+    fn <- paste0(resultFolder, "/",
                  sampleName, "_multiplicity.txt")
     write.table(mult, file = fn, sep = "\t", row.names = F, quote = F)
     shellCommand <- paste0("gzip -f ", fn)
@@ -1031,7 +1031,7 @@ WritePcawgFormats <- function(ssm, res, resultsFolder, sampleName,
     }
 
     mutAssign <- data.frame(mutAssign, mutR)
-    fn <- paste0(resultsFolder, "/",
+    fn <- paste0(resultFolder, "/",
                  sampleName, "_assignment_probability_table.txt")
     write.table(mutAssign, file = fn, sep = "\t", row.names = F, quote = F)
     shellCommand <- paste0("gzip -f ", fn)
@@ -1047,7 +1047,7 @@ WritePcawgFormats <- function(ssm, res, resultsFolder, sampleName,
     } else {
       mutAssign$cluster <- apply(res$full.model$responsibility, 1, which.max)
     }
-    fn <- paste0(resultsFolder, "/",
+    fn <- paste0(resultFolder, "/",
                  sampleName, "_mutation_assignments.txt")
     write.table(mutAssign, file = fn, sep = "\t", row.names = F, quote = F)
     shellCommand <- paste0("gzip -f ", fn)
@@ -1062,7 +1062,7 @@ WritePcawgFormats <- function(ssm, res, resultsFolder, sampleName,
     clusterCertainty <- rename(clusterCertainty, cluster = Var1, n_ssms = Freq)
     clusterCertainty$proportion <- res$full.model$ccfMean[as.integer(clusterCertainty$cluster)] * cellularity
     clusterCertainty$cluster <- seq_along(uniqLabels)
-    fn <- paste0(resultsFolder, "/",
+    fn <- paste0(resultFolder, "/",
                  sampleName, "_subclonal_structure.txt")
     write.table(clusterCertainty, file = fn, sep = "\t", row.names = F, quote = F)
     shellCommand <- paste0("gzip -f ", fn)
@@ -1074,7 +1074,7 @@ WritePcawgFormats <- function(ssm, res, resultsFolder, sampleName,
   if (outputCcm) {
     coClustMat <- Matrix::tcrossprod(res$full.model$responsibility)
     diag(coClustMat) <- 1
-    fn = paste0(resultsFolder, "/", sampleName, "_coassignment_probabilities.txt")
+    fn = paste0(resultFolder, "/", sampleName, "_coassignment_probabilities.txt")
     write.table(coClustMat, file = fn, sep = "\t", col.names = F, row.names = F, quote = F )
     shellCommand <- paste0("gzip -f ", fn)
     system(shellCommand, intern = TRUE)
@@ -1086,7 +1086,7 @@ WritePcawgFormats <- function(ssm, res, resultsFolder, sampleName,
   if (outputCcmIdx) {
     indexFile <- cbind(id[,1], id[, 2], seq_along(id[,1]))
     colnames(indexFile) <- c("chr", "pos", "col")
-    fn = paste0(resultsFolder, "/", sampleName, "_index.txt")
+    fn = paste0(resultFolder, "/", sampleName, "_index.txt")
     write.table(indexFile, file = fn, sep = "\t", row.names = F, quote = F )
     shellCommand <- paste0("gzip -f ", fn)
     system(shellCommand, intern = TRUE)
@@ -1309,11 +1309,11 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
     }
 
     save(ssm, results, res, lb, file = fn)
-    WritePcawgFormats(ssm = ssm, res = res, resultsFolder = resultsFolder,
+    WritePcawgFormats(ssm = ssm, res = res, resultFolder = resultFolder,
                       sampleName = sampleName, allFormats = allFormats,
                       basicFormats = basicFormats)
     # summary graph
-    fn <- paste0(resultsFolder, "/", sampleName, "_results_summary.pdf")
+    fn <- paste0(resultFolder, "/", sampleName, "_results_summary.pdf")
     MakeCcubeStdPlot(ssm = ssm, res = res, printPlot = T, fn = fn)
 
   }
