@@ -1118,6 +1118,7 @@ WritePcawgFormats <- function(ssm, res, resultsFolder, sampleName,
 RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder = NULL,
                              runParser = F, variantCaller = NULL, cnaCaller = NULL,
                              runAnalysis = F, runQC = F, runAnalysisSnap = F, writeOutput = F,
+                             allFormats = F, basicFormats = F,
                              vcfFile = NULL, copyNumberFile = NULL, purity = NA,
                              numOfClusterPool = NULL, numOfRepeat = NULL,
                              epi = 1e-3, tol = 1e-8, maxiter = 1e3,
@@ -1153,6 +1154,7 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
 
 
   if (runParser) {
+
     shellCommandConsensus <- paste(
       "python create_ccfclust_inputs_consensus_bb.py -v ", variantCaller,
       " --output-variants ", paste0(dataFolder, "/ssm_data.txt"),
@@ -1244,12 +1246,17 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
   }
 
   if (runQC) {
-    load(ccubeResultRDataFile)
 
+    if (!is.null(ccubeResultRDataFile) ) {
+      if (file.exists(ccubeResultRDataFile)) {
+        load(ccubeResultRDataFile)
+        sortedIdx <- sort(lb, decreasing = T, index.return = T)$ix
+      }
+    }
     # Check for clonal cluster
     foundDiffRes <- F
     if (! HasClonalCluster(res) ) {
-      for (ii in sortedIdx[-1]) {
+      for (ii in sortedIdx) {
         rr <- results[[ii]]
         if (HasClonalCluster(rr)) {
           foundDiffRes <- T
@@ -1302,10 +1309,13 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
     }
 
     save(ssm, results, res, lb, file = fn)
-    WritePcawgFormats(ssm = ssm, res = res, resultsFolder = resultsFolder, sampleName = sampleName, allFormats = T)
+    WritePcawgFormats(ssm = ssm, res = res, resultsFolder = resultsFolder,
+                      sampleName = sampleName, allFormats = allFormats,
+                      basicFormats = basicFormats)
     # summary graph
     fn <- paste0(resultsFolder, "/", sampleName, "_results_summary.pdf")
     MakeCcubeStdPlot(ssm = ssm, res = res, printPlot = T, fn = fn)
+
   }
 
 }
