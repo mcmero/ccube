@@ -1172,7 +1172,7 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
     if (cnaCaller == "pcawg11_std") {
       ssm = ParseSnvCnaPcawg11Format(ssm, cna)
     } else {
-      ssm = ParseSnvCnaPreConsensus(ssm, cna)
+      ssm = ParseSnvCnaConsensus(ssm, cna)
     }
 
 

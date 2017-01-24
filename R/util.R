@@ -280,6 +280,42 @@ ParseSnvCnaPreConsensus <- function(ssm, cna) {
   return(ssm)
 }
 
+#' Parse final consensus files
+#' @param ssm ssms
+#' @param cna copy number
+#' @return ccube data frame
+#' @export
+ParseSnvCnaConsensus <- function(ssm, cna) {
+
+  id <- Reduce(rbind, strsplit(as.character(ssm$gene), "_", fixed = T), c())
+  ssm$chr = as.integer(id[,1])
+  ssm$pos = as.integer(id[,2])
+  ssm$mu_r <- NULL
+  ssm$mu_v <- NULL
+  ssm$cn_ref <- NULL
+  ssm$cn_tot <- NULL
+  ssm$cn_frac = 1
+  ssm$major_cn = NA
+  ssm$minor_cn = NA
+  ssm$star = NA
+  ssm$level = NA
+  for (jj in seq_len(nrow(cna)) ) {
+    cc = cna[jj,]
+    tmp = dplyr::filter(rowwise(ssm), chr == cc$chromosome &  (pos >= cc$start & pos <= cc$end))
+    if (nrow(tmp) > 0) {
+      idx <- which(ssm$id %in% tmp$id)
+      ssm[idx, ]$major_cn <- cc$major_cn
+      ssm[idx, ]$minor_cn <- cc$minor_cn
+      ssm[idx, ]$star <- cc$star
+      ssm[idx, ]$level <- cc$level
+    }
+  }
+  ssm$chr <-NULL
+  ssm$pos <-NULL
+  ssm <- dplyr::filter(ssm, !is.na(major_cn) & !is.na(minor_cn) & !is.na(star) & major_cn > 0)
+  return(ssm)
+}
+
 #' Assign data to centers
 #' @param x datas
 #' @param centers cluster centers
