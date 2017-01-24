@@ -985,7 +985,7 @@ WritePcawgFormats <- function(ssm, res, resultFolder, sampleName,
                               outputSubStruct = F, outputCcm = F, outputCcmIdx = F) {
   if (basicFormats) {
     outputMult <- T
-    outputAssignProb <- T
+    outputAssign <- T
     outputSubStruct <- T
   }
 
@@ -1002,7 +1002,7 @@ WritePcawgFormats <- function(ssm, res, resultFolder, sampleName,
   uniqLabels <- unique(res$label)
   dir.create(resultFolder, recursive = T)
 
-  id <- Reduce(rbind, strsplit(as.character(ssm$gene), "_", fixed = T), c())
+  id <- Reduce(rbind, strsplit(as.character(ssm$mutation_id), "_", fixed = T), c())
 
   # Multiplicity
   if (outputMult) {
