@@ -431,8 +431,8 @@ VariationalMaximimizationStep <- function(bn, dn, cn, cr, major_cn, epi, purity,
   numberOfDataPoints <- nrow(responsibility)
   if (fit_mult) {
     for (ii in 1:numberOfDataPoints) {
-      qq <- rep(0, major_cn[ii])
-      bvPool <- 0:major_cn[ii]
+      bvPool <- 1:major_cn[ii]
+      qq <- rep(NA, length(bvPool))
       for (jj in seq_along(bvPool) ) {
         aa <- purity * (bvPool[jj] *(1-epi) -cr[ii]*epi) / ((1-purity)*cn + purity * cr[ii])
         aa2 <- aa^2
