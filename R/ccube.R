@@ -644,10 +644,9 @@ GetPurity <- function(mydata) {
     purity <- tmpdata$cp
   } else {
     res <- vbsmm(tmpdata$cp, init = K, tol = 1e-5,  verbose = F)
-    pool <- res$mu[unique(res$label)]
-    ww <- (res$full.model$Epi[unique(res$label)]>1.5e-2)
-    pool1 <- pool[ww]
-    maxCp <- max(pool1[pool1 <=1])
+    ww <- which( (table(res$label)/length(res$label) ) > 1.5e-2)
+    pool <- res$mu[ww]
+    maxCp <- max(pool[pool<=1])
     purity  <- if (maxCp > 1) 1 else maxCp
   }
 
