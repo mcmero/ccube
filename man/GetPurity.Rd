@@ -4,10 +4,16 @@
 \alias{GetPurity}
 \title{Estimate purity}
 \usage{
-GetPurity(mydata)
+GetPurity(mydata, wgd = F, K = 6, th = 0.015)
 }
 \arguments{
 \item{mydata}{ccube data}
+
+\item{wgd}{whole genome duplication status}
+
+\item{K}{total number of cluster in student't mixture}
+
+\item{th}{threshold on weights to be eligible for clonal cluster}
 }
 \value{
 purity

@@ -620,14 +620,23 @@ VariationalLowerBound <- function(bn, dn, cn, cr, epi, purity, model) {
 
 #' Estimate purity
 #' @param mydata ccube data
+#' @param wgd whole genome duplication status
+#' @param K total number of cluster in student't mixture
+#' @param th threshold on weights to be eligible for clonal cluster
 #' @return purity
 #' @export
-GetPurity <- function(mydata) {
+GetPurity <- function(mydata, wgd=F, K = 6, th = 1.5e-2) {
   vtox<-function(v,nA,nB,tA,tB)
   {
     (nB - nB*v - nA*v) / (tA*v + tB*v + nB - tB -nA*v - nB*v)
   }
-  tmpdata <- dplyr::filter(mydata, major_cn == minor_cn & major_cn != 0 )
+
+  tmpdata <- dplyr::filter(mydata, major_cn == minor_cn & major_cn != 0)
+
+  if (!wgd) {
+    tmpdata <- dplyr::filter(mydata, major_cn == minor_cn & major_cn == 1)
+  }
+
   if (nrow(tmpdata) == 0) {
     return(NA)
   }
@@ -635,7 +644,7 @@ GetPurity <- function(mydata) {
   tmpdata <- dplyr::mutate(tmpdata, vaf = var_counts/(var_counts+ref_counts))
   tmpdata <- dplyr::mutate(dplyr::rowwise(tmpdata), cp = vtox(vaf, 2, 0, ploidy/2, ploidy/2))
   tmpdata <- dplyr::filter(tmpdata, !is.infinite(cp) & !is.na(cp))
-  K = 6
+
   if (K >= nrow(tmpdata)) {
     K = nrow(tmpdata) - 1
     if (K == 0) {K = 1}
@@ -645,7 +654,7 @@ GetPurity <- function(mydata) {
   } else {
     res <- vbsmm(tmpdata$cp, init = K, tol = 1e-5,  verbose = F)
     uniqLabels <- sort(unique(res$label))
-    ww <- uniqLabels[which( (table(res$label)/length(res$label) ) > 1.5e-2)]
+    ww <- uniqLabels[which( (table(res$label)/length(res$label) ) > th)]
     pool <- res$mu[ww]
     maxCp <- max(pool[pool<=1])
     purity  <- if (maxCp > 1) 1 else maxCp
