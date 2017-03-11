@@ -557,8 +557,17 @@ VariationalLowerBound <- function(bn, dn, cn, cr, epi, purity, model) {
   nk <- colSums(R)									# 10.51
 
   n <- length(bn)
-  d <- nrow(m)
-  k <- ncol(m)
+
+  if (is.matrix(m)) {
+    d <- nrow(m)
+    k <- ncol(m)
+  } else {
+    d <- 1
+    k <- length(m)
+  }
+
+
+
 
   Elogpi <- digamma(dirichletConcentration) - digamma(sum(dirichletConcentration))		# 10.66
 
@@ -691,8 +700,19 @@ MakeCcubeStdPlot <- function(ssm, res, myColors=gg_color_hue(10), printPlot = F,
     }
   }
 
-  Emu <- res$full.model$ccfMean
-  Esigma <- res$full.model$ccfCov
+
+  if (is.matrix(res$full.model$ccfMean)) {
+    Emu <- res$full.model$ccfMean[,]
+  } else {
+    Emu <- res$full.model$ccfMean
+  }
+
+  if (is.matrix(res$full.model$ccfCov)) {
+    Esigma <- res$full.model$ccfCov[,]
+  } else {
+    Esigma <- res$full.model$ccfCov
+  }
+
   Epi <- res$full.model$Epi
 
   params <- data.frame(Emu, Esigma, Epi)
@@ -899,8 +919,8 @@ RemoveClusterAndReassignVariantsWithEstep <- function(res, removeIdx, ssm = NULL
   reassignSsm <- ssm[reassignIdx, ]
 
   if (! is.null(res$full.model) ) {
-    res$full.model$ccfMean <- res$full.model$ccfMean[-removeIdx]
-    res$full.model$ccfCov <- res$full.model$ccfCov[-removeIdx]
+    res$full.model$ccfMean <- t(as.matrix(res$full.model$ccfMean[-removeIdx]))
+    res$full.model$ccfCov <- t(as.matrix(res$full.model$ccfCov[-removeIdx]))
 
     logRho <- res$full.model$logResponsibility[, -removeIdx]
 
@@ -979,6 +999,182 @@ RemoveClusterAndReassignVariantsWithEstep <- function(res, removeIdx, ssm = NULL
   res
 }
 
+#' Remove a (or more) cluster and reassign its data if the cluster is nonempty
+#' @param res Ccube result list
+#' @param  removeIdx clusters to remove
+#' @param ssm data
+#' @param label assigned labels if res doesn't have label variable
+#' @param tol stopping condition
+#' @param maxiter maximum iteration
+#' @param verbose show progress
+#' @return Ccube result list
+#' @export
+RemoveClusterAndReassignVariantsWithEMsteps <- function(res, removeIdx, ssm = NULL, label = NULL, tol = 1e-8, maxiter = 100, verbose = F) {
+
+  if (length(removeIdx) == 0) {
+    return(res)
+  }
+
+  if (!is.null(res$label)) {
+    uniqLabels <- sort(unique(res$label))
+  } else {
+    uniqLabels <- sort(unique(label))
+  }
+
+  remainedLabels <- uniqLabels[which(!uniqLabels %in% removeIdx)]
+  uniqLabels[ which(uniqLabels %in% removeIdx) ] <- NA
+  newLabels <- match(res$label, uniqLabels)
+  reassignIdx <- which(is.na(newLabels))
+  reassignSsm <- ssm[reassignIdx, ]
+
+  if (! is.null(res$full.model) ) {
+    res$full.model$ccfMean <- t(as.matrix(res$full.model$ccfMean[-removeIdx]))
+    res$full.model$ccfCov <-  t(as.matrix(res$full.model$ccfCov[-removeIdx]))
+
+    logRho <- res$full.model$logResponsibility[, -removeIdx]
+
+    if (!is.matrix(logRho)) {
+      logRho <- as.matrix(logRho)
+    }
+
+    res$full.model$logResponsibility <-
+      if (length(res$label) ==length(res$full.model$ccfMean)) {
+        bsxfun.se("-", logRho, logsumexp(logRho, 1), expandByRow = F)	# 10.49
+      } else {
+        bsxfun.se("-", logRho, logsumexp(logRho, 1))	# 10.49
+      }
+
+    res$full.model$responsibility <- exp(res$full.model$logResponsibility)
+    res$full.model$dirichletConcentration <- res$full.model$dirichletConcentration0 + colSums(res$full.model$responsibility)
+
+    if(!is.null(ssm)) {
+      ll = rep(-Inf, maxiter)
+      vbiter = 1
+      converged = F
+      degenerated = F
+      while (!converged & vbiter < maxiter & !degenerated) {
+        vbiter = vbiter + 1
+
+        res$full.model <- VarationalExpectationStep(bn = ssm$var_counts,
+                                                    dn = ssm$ref_counts + ssm$var_counts,
+                                                    cn = unique(ssm$normal_cn),
+                                                    cr = ssm$major_cn + ssm$minor_cn,
+                                                    epi = 1e-3,
+                                                    purity = unique(ssm$purity),
+                                                    model = res$full.model)
+
+        res$full.model <- VariationalMaximimizationStep(bn = ssm$var_counts,
+                                                        dn = ssm$ref_counts + ssm$var_counts,
+                                                        cn = unique(ssm$normal_cn),
+                                                        cr = ssm$major_cn + ssm$minor_cn,
+                                                        major_cn = ssm$major_cn,
+                                                        epi = 1e-3,
+                                                        purity = unique(ssm$purity),
+                                                        model = res$full.model,fit_mult = fit_mult,
+                                                        fit_hyper = fit_hyper)
+
+        ll[vbiter] = VariationalLowerBound(bn = ssm$var_counts,
+                                   dn = ssm$ref_counts + ssm$var_counts,
+                                   cn = unique(ssm$normal_cn),
+                                   cr = ssm$major_cn + ssm$minor_cn,
+                                   epi = 1e-3,
+                                   purity = unique(ssm$purity),
+                                   model = res$full.model)/length(res$label)
+
+        converged <- abs(ll[vbiter] - ll[vbiter-1]) < (tol * abs(ll[vbiter]))
+        degenerated <- (ll[vbiter] - ll[vbiter-1]) < 0
+        if(verbose) cat(sprintf("\rVB-EM-%d: L = %.8f \r", vbiter, ll[vbiter]))
+      }
+
+
+      res$label <- apply(res$full.model$responsibility, 1, which.max)
+    }
+
+
+
+    if (!is.null(res$R)) {
+      res$R=res$full.model$responsibility
+    }
+
+    if (!is.null(res$mu)) {
+      res$mu=res$full.model$ccfMean
+    }
+    if (! is.null(res$full.model$Epi)) {
+      Epi <- (res$full.model$dirichletConcentration + colSums(res$full.model$responsibility)) /
+        (length(res$full.model$ccfMean) * res$full.model$dirichletConcentration0 + length(res$label))
+      res$full.model$Epi <- Epi/sum(Epi)
+    }
+
+  } else {
+
+    res$ccfMean <- res$ccfMean[-removeIdx]
+    res$ccfCov <- res$ccfCov[-removeIdx]
+
+    logRho <- res$logResponsibility[, -removeIdx]
+
+    if (!is.matrix(logRho)) {
+      logRho <- as.matrix(logRho)
+    }
+
+    res$logResponsibility <-
+      if (length(label) ==length(res$ccfMean)) {
+        bsxfun.se("-", logRho, logsumexp(logRho, 1), expandByRow = F)	# 10.49
+      } else {
+        bsxfun.se("-", logRho, logsumexp(logRho, 1))	# 10.49
+      }
+    res$dirichletConcentration <- res$dirichletConcentration0 + colSums(res$responsibility)
+
+    if(!is.null(ssm)) {
+      res <- VarationalExpectationStep(bn = ssm$var_counts,
+                                       dn = ssm$ref_counts + ssm$var_counts,
+                                       cn = unique(ssm$normal_cn),
+                                       cr = ssm$major_cn + ssm$minor_cn,
+                                       epi = 1e-3,
+                                       purity = unique(ssm$purity),
+                                       model = res)
+      res$dirichletConcentration <- res$dirichletConcentration0 + colSums(res$responsibility)
+    }
+
+  }
+
+  res
+}
+
+
+
+#' Merge clusters
+#' @param res ccube results list
+#' @param ssm ccube data frame
+#' @param tol stopping condition in VBEM
+#' @param maxiter maximum iteration in VBEM
+#' @return res ccube results list
+#' @export
+MergeClusters <- function(res = res, ssm = ssm, tol = 1e-8, maxiter = 100) {
+
+  res <- CullEmptyClusters(res = res, ssm = ssm)
+
+  if (is.matrix(res$full.model$ccfMean)) {
+    ccfCentersMap = res$full.model$ccfMean[,]
+  } else {
+    ccfCentersMap = res$full.model$ccfMean
+  }
+
+  clusterWeights <- as.data.frame(table(res$label), stringsAsFactors = F)
+  clusterWeights <- dplyr::mutate(clusterWeights, Var1 = as.integer(Var1))
+  ccfDistMat <- dist(ccfCentersMap)
+  idx <- as.data.frame(which(as.matrix( ccfDistMat )< 0.1, arr.ind = TRUE), stringsAsFactors =F)
+  idx <- dplyr::filter(idx, row != col)
+  idx <- dplyr::left_join(idx, clusterWeights, by = c("col"="Var1"))
+  idx <- dplyr::rename(idx, col_weights = Freq)
+  idx <- dplyr::left_join(idx, clusterWeights, by = c("row"="Var1"))
+  idx <- dplyr::rename(idx, row_weights = Freq)
+  idx <- dplyr::mutate(rowwise(idx), remove_idx = c(row, col)[which.min(c(row_weights, col_weights))] )
+  removeIdx <- unique(idx$remove_idx)
+  res$mergeCluster <- length(removeIdx)>0
+  return(RemoveClusterAndReassignVariantsWithEMsteps(res = res,
+                                                     removeIdx = removeIdx, ssm = ssm,
+                                                     tol = tol, maxiter = maxiter))
+}
 
 
 #' Write files in PCAWG-11 formats, works for both CcubeCore and ccube_m6 output
@@ -1054,7 +1250,7 @@ WritePcawgFormats <- function(ssm, res, resultFolder, sampleName,
     if (length(uniqLabels) == 1) {
       mutAssign$cluster = 1
     } else {
-      mutAssign$cluster <- apply(res$full.model$responsibility, 1, which.max)
+      mutAssign$cluster <- res$label
     }
     fn <- paste0(resultFolder, "/",
                  sampleName, "_mutation_assignments.txt")
@@ -1294,9 +1490,14 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
     res <- CullSmallClusters(res = res, ssm = ssm, tol = 1e-2)
     passSmallClusterTest <- T
 
+    # Merge clusters
+    res <- MergeClusters(res, ssm)
+    passMergeClusterTest <- T
+
     res$qc <- list(passClonalCluterTest = passClonalCluterTest,
-                  passEmptyCluterTest = passEmptyCluterTest,
-                  passSmallClusterTest = passSmallClusterTest)
+                   passEmptyCluterTest = passEmptyCluterTest,
+                   passSmallClusterTest = passSmallClusterTest,
+                   passMergeClusterTest = passMergeClusterTest)
   }
 
 
@@ -1329,6 +1530,18 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
     # summary graph
     fn <- paste0(resultFolder, "/", sampleName, "_results_summary.pdf")
     MakeCcubeStdPlot(ssm = ssm, res = res, printPlot = T, fn = fn)
+
+  }
+
+  if (runPcawgFinalQc) {
+
+    if (!is.null(ccubeResultRDataFile) ) {
+      if (file.exists(ccubeResultRDataFile)) {
+        load(ccubeResultRDataFile)
+      }
+    }
+
+
 
   }
 
