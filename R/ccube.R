@@ -1322,7 +1322,8 @@ WritePcawgFormats <- function(ssm, res, resultFolder, sampleName,
 #' @export
 RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder = NULL,
                              runParser = F, variantCaller = NULL, cnaCaller = NULL,
-                             runAnalysis = F, runQC = F, runAnalysisSnap = F, writeOutput = F,
+                             runAnalysis = F, runQC = F, runAnalysisSnap = F, runPcawgMergerQc =F,
+                             writeOutput = F,
                              allFormats = F, basicFormats = T,
                              vcfFile = NULL, copyNumberFile = NULL, purity = NA,
                              numOfClusterPool = NULL, numOfRepeat = NULL,
@@ -1533,7 +1534,7 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
 
   }
 
-  if (runPcawgFinalQc) {
+  if (runPcawgMergerQc) {
 
     if (!is.null(ccubeResultRDataFile) ) {
       if (file.exists(ccubeResultRDataFile)) {
@@ -1541,7 +1542,37 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
       }
     }
 
+    res = MergeClusters(res = res, ssm = ssm)
 
+    if (res$mergeCluster) {
+      ssm$ccube_ccf_mean <- res$full.model$ccfMean[res$label]
+      ssm$ccube_mult <- res$full.model$bv
+      ssm <- mutate(rowwise(ssm),
+                    vaf = var_counts/(var_counts+ref_counts),
+                    ccube_ccf = MapVaf2CcfPyClone(vaf,
+                                                  purity,
+                                                  normal_cn,
+                                                  major_cn + minor_cn,
+                                                  major_cn + minor_cn,
+                                                  ccube_mult,
+                                                  constraint=F) )
+
+      # write Ccube results Rdata
+      if (! is.null(ccubeResultRDataFile) ) {
+        fn <-  ccubeResultRDataFile
+      } else {
+        fn <- paste0(dataFolder,
+                     "/ccube_res.RData")
+      }
+
+      save(ssm, results, res, lb, file = fn)
+      WritePcawgFormats(ssm = ssm, res = res, resultFolder = resultFolder,
+                        sampleName = sampleName, allFormats = allFormats,
+                        basicFormats = basicFormats)
+      # summary graph
+      fn <- paste0(resultFolder, "/", sampleName, "_results_summary.pdf")
+      MakeCcubeStdPlot(ssm = ssm, res = res, printPlot = T, fn = fn)
+    }
 
   }
 
