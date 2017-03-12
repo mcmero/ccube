@@ -1322,7 +1322,7 @@ WritePcawgFormats <- function(ssm, res, resultFolder, sampleName,
 #' @export
 RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder = NULL,
                              runParser = F, variantCaller = NULL, cnaCaller = NULL,
-                             runAnalysis = F, runQC = F, runAnalysisSnap = F, runPcawgMergerQc =F,
+                             runAnalysis = F, runQC = F, runAnalysisSnap = F, runPcawgMergeQc =F,
                              writeOutput = F,
                              allFormats = F, basicFormats = T,
                              vcfFile = NULL, copyNumberFile = NULL, purity = NA,
@@ -1534,7 +1534,7 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
 
   }
 
-  if (runPcawgMergerQc) {
+  if (runPcawgMergeQc) {
 
     if (!is.null(ccubeResultRDataFile) ) {
       if (file.exists(ccubeResultRDataFile)) {
