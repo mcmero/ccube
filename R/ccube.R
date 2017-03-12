@@ -1009,7 +1009,8 @@ RemoveClusterAndReassignVariantsWithEstep <- function(res, removeIdx, ssm = NULL
 #' @param verbose show progress
 #' @return Ccube result list
 #' @export
-RemoveClusterAndReassignVariantsWithEMsteps <- function(res, removeIdx, ssm = NULL, label = NULL, tol = 1e-8, maxiter = 100, verbose = F) {
+RemoveClusterAndReassignVariantsWithEMsteps <- function(res, removeIdx, ssm = NULL, label = NULL, tol = 1e-8, maxiter = 100, verbose = F,
+                                                        fit_mult = T, fit_hyper = T) {
 
   if (length(removeIdx) == 0) {
     return(res)
