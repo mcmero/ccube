@@ -181,7 +181,7 @@ ParseSnvCnaOld <- function (ssm, cna) {
       cnatmp1[[j]] = paste(cnatmp1[[j]], cna[j,]$frac, sep="," )
     }
     cnatmp1 <- unlist(cnatmp1)
-    cnatmp2 <- Reduce(
+    cnatmp2 <- do.call(
       rbind, strsplit(cnatmp1, ",")
     )
 
@@ -218,7 +218,7 @@ ParseSnvCnaOld <- function (ssm, cna) {
 #' @export
 ParseSnvCnaPcawg11Format <- function (ssm, cna) {
 
-  id <- Reduce(rbind, strsplit(as.character(ssm$gene), "_", fixed = T), c())
+  id <- do.call(rbind, strsplit(as.character(ssm$gene), "_", fixed = T))
   ssm$chr = as.integer(id[,1])
   ssm$pos = as.integer(id[,2])
   ssm$mu_r <- NULL
@@ -231,9 +231,8 @@ ParseSnvCnaPcawg11Format <- function (ssm, cna) {
 
   for (jj in seq_len(nrow(cna)) ) {
     cc = cna[jj,]
-    tmp = dplyr::filter(rowwise(ssm), chr == cc$chromosome &  (pos >= cc$start & pos <= cc$end))
-    if (nrow(tmp) > 0) {
-      idx <- which(ssm$id %in% tmp$id)
+    idx = which(ssm$chr == cc$chromosome &  (ssm$pos >= cc$start & ssm$pos <= cc$end) )
+    if (length(idx) > 0) {
       ssm[idx, ]$major_cn <- cc$major_cn
       ssm[idx, ]$minor_cn <- cc$minor_cn
       ssm[idx, ]$cn_frac <- cc$ccf
@@ -253,7 +252,7 @@ ParseSnvCnaPcawg11Format <- function (ssm, cna) {
 #' @export
 ParseSnvCnaPreConsensus <- function(ssm, cna) {
 
-  id <- Reduce(rbind, strsplit(as.character(ssm$gene), "_", fixed = T), c())
+  id <- do.call(rbind, strsplit(as.character(ssm$gene), "_", fixed = T))
   ssm$chr = as.integer(id[,1])
   ssm$pos = as.integer(id[,2])
   ssm$mu_r <- NULL
@@ -266,9 +265,8 @@ ParseSnvCnaPreConsensus <- function(ssm, cna) {
   ssm$star = NA
   for (jj in seq_len(nrow(cna)) ) {
     cc = cna[jj,]
-    tmp = dplyr::filter(rowwise(ssm), chr == cc$chromosome &  (pos >= cc$start & pos <= cc$end))
-    if (nrow(tmp) > 0) {
-      idx <- which(ssm$id %in% tmp$id)
+    idx = which(ssm$chr == cc$chromosome &  (ssm$pos >= cc$start & ssm$pos <= cc$end) )
+    if (length(idx) > 0) {
       ssm[idx, ]$major_cn <- cc$major_cn
       ssm[idx, ]$minor_cn <- cc$minor_cn
       ssm[idx, ]$star <- cc$star
@@ -287,7 +285,7 @@ ParseSnvCnaPreConsensus <- function(ssm, cna) {
 #' @export
 ParseSnvCnaConsensus <- function(ssm, cna) {
 
-  id <- Reduce(rbind, strsplit(as.character(ssm$gene), "_", fixed = T), c())
+  id <- do.call(rbind, strsplit(as.character(ssm$gene), "_", fixed = T))
   ssm$chr = as.integer(id[,1])
   ssm$pos = as.integer(id[,2])
   ssm$mu_r <- NULL
@@ -301,9 +299,8 @@ ParseSnvCnaConsensus <- function(ssm, cna) {
   ssm$level = NA
   for (jj in seq_len(nrow(cna)) ) {
     cc = cna[jj,]
-    tmp = dplyr::filter(rowwise(ssm), chr == cc$chromosome &  (pos >= cc$start & pos <= cc$end))
-    if (nrow(tmp) > 0) {
-      idx <- which(ssm$id %in% tmp$id)
+    idx = which(ssm$chr == cc$chromosome &  (ssm$pos >= cc$start & ssm$pos <= cc$end) )
+    if (length(idx) > 0) {
       ssm[idx, ]$major_cn <- cc$major_cn
       ssm[idx, ]$minor_cn <- cc$minor_cn
       ssm[idx, ]$star <- cc$star
@@ -312,7 +309,7 @@ ParseSnvCnaConsensus <- function(ssm, cna) {
   }
   ssm$chr <-NULL
   ssm$pos <-NULL
-  ssm <- dplyr::filter(ssm, !is.na(major_cn) & !is.na(minor_cn) & !is.na(star) & major_cn > 0)
+  ssm <- dplyr::filter(ssm, !is.na(major_cn) & !is.na(minor_cn) & major_cn > 0)
   return(ssm)
 }
 

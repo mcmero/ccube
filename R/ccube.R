@@ -1208,7 +1208,7 @@ WritePcawgFormats <- function(ssm, res, resultFolder, sampleName,
   uniqLabels <- unique(res$label)
   dir.create(resultFolder, recursive = T)
 
-  id <- Reduce(rbind, strsplit(as.character(ssm$mutation_id), "_", fixed = T), c())
+  id <- do.call(rbind, strsplit(as.character(ssm$mutation_id), "_", fixed = T))
 
   # Multiplicity
   if (outputMult) {
