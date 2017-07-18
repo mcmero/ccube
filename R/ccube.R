@@ -299,7 +299,7 @@ GetCcf <- function(mydata, use = c("use_base", "use_one")) {
 
     if (nrow(dd) > 0) {
       dd <- dplyr::mutate(dplyr::rowwise(dd), ccf = min(c(ccf1, ccf2, ccf3), na.rm = T ))
-      mydata[mydata$mutation_id %in% dd$mutation_id,]$ccf = dd$ccf
+      mydata[mydata$id %in% dd$id,]$ccf = dd$ccf
     }
 
     mydata <- dplyr::mutate(dplyr::rowwise(mydata),
@@ -317,8 +317,8 @@ GetCcf <- function(mydata, use = c("use_base", "use_one")) {
                                                    1, constraint = F))
 
 
-      mydata[mydata$mutation_id %in% dd1$mutation_id,]$ccf = dd1$ccf
-      mydata[mydata$mutation_id %in% dd1$mutation_id,]$mult = 1
+      mydata[mydata$id %in% dd1$id,]$ccf = dd1$ccf
+      mydata[mydata$id %in% dd1$id,]$mult = 1
     }
   }
 
