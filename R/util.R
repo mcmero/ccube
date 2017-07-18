@@ -219,7 +219,7 @@ ParseSnvCnaOld <- function (ssm, cna) {
 ParseSnvCnaPcawg11Format <- function (ssm, cna) {
 
   id <- do.call(rbind, strsplit(as.character(ssm$gene), "_", fixed = T))
-  ssm$chr = as.integer(id[,1])
+  ssm$chr = id[,1]
   ssm$pos = as.integer(id[,2])
   ssm$mu_r <- NULL
   ssm$mu_v <- NULL
@@ -286,7 +286,7 @@ ParseSnvCnaPreConsensus <- function(ssm, cna) {
 ParseSnvCnaConsensus <- function(ssm, cna) {
 
   id <- do.call(rbind, strsplit(as.character(ssm$gene), "_", fixed = T))
-  ssm$chr = as.integer(id[,1])
+  ssm$chr = id[,1]
   ssm$pos = as.integer(id[,2])
   ssm$mu_r <- NULL
   ssm$mu_v <- NULL
