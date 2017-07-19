@@ -434,7 +434,7 @@ VariationalMaximimizationStep <- function(bn, dn, cn, cr, major_cn, epi, purity,
       bvPool <- 1:major_cn[ii]
       qq <- rep(NA, length(bvPool))
       for (jj in seq_along(bvPool) ) {
-        aa <- purity * (bvPool[jj] *(1-epi) -cr[ii]*epi) / ((1-purity)*cn + purity * cr[ii])
+        aa <- purity * (bvPool[jj] *(1-epi) -cr[ii]*epi) / ((1-purity)*cn[ii] + purity * cr[ii])
         aa2 <- aa^2
         bb <- epi
         term1 <- sum(responsibility[ii, ] * bn[ii] * (log (aa * ccfMean +bb) - aa2*ccfCov/(2 * (aa * ccfMean +bb)^2 ) ))
