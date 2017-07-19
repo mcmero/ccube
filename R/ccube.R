@@ -59,7 +59,7 @@ ccube_m6 <- function(mydata, epi=1e-3, init=2, prior=NULL, tol=1e-20, maxiter=1e
 
   dn <- mydata$ref_counts + mydata$var_counts
   bn <- mydata$var_counts
-  cn <- unique(mydata$normal_cn)
+  cn <- mydata$normal_cn
   cr <- mydata$major_cn + mydata$minor_cn
   major_cn <- mydata$major_cn
   purity <- unique(mydata$purity)
@@ -167,7 +167,7 @@ CcubeCore <- function(mydata, epi=1e-3, init=2, prior, tol=1e-20, maxiter=1e3, f
 
   dn <- mydata$ref_counts + mydata$var_counts
   bn <- mydata$var_counts
-  cn <- unique(mydata$normal_cn)
+  cn <- mydata$normal_cn
   cr <- mydata$major_cn + mydata$minor_cn
   major_cn <- mydata$major_cn
   purity <- unique(mydata$purity)
