@@ -6,12 +6,13 @@
 \usage{
 RunCcubePipeline(sampleName = NULL, dataFolder = NULL,
   resultFolder = NULL, runParser = F, variantCaller = NULL,
-  cnaCaller = NULL, runAnalysis = F, runQC = F, runAnalysisSnap = F,
-  writeOutput = F, allFormats = F, basicFormats = T, vcfFile = NULL,
+  cnaCaller = NULL, runAnalysis = F, runQC = F,
+  runAnalysisSnap = F, runPcawgMergeQc = F, writeOutput = F,
+  allFormats = F, basicFormats = T, vcfFile = NULL,
   copyNumberFile = NULL, purity = NA, numOfClusterPool = NULL,
   numOfRepeat = NULL, epi = 0.001, tol = 1e-08, maxiter = 1000,
-  multiCore = F, ccubeInputRDataFile = NULL, ccubeResultRDataFile = NULL,
-  maxSnv = 50000)
+  multiCore = F, ccubeInputRDataFile = NULL,
+  ccubeResultRDataFile = NULL, maxSnv = 50000)
 }
 \arguments{
 \item{sampleName}{sample name}
@@ -53,4 +54,3 @@ RunCcubePipeline(sampleName = NULL, dataFolder = NULL,
 \description{
 Run Ccube analysis
 }
-

@@ -22,4 +22,3 @@ Ccube result list
 \description{
 Remove a (or more) cluster and reassign its data if the cluster is nonempty
 }
-

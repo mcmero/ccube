@@ -34,4 +34,3 @@ ccf
 \description{
 Convert vaf to ccf using pyclone style mapping
 }
-

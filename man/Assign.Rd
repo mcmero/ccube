@@ -19,4 +19,3 @@ assignment probabilites and log probabilites
 \description{
 Assign data to centers
 }
-

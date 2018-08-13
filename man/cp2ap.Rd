@@ -27,4 +27,3 @@ vaf
 \description{
 Convert ccf to vaf
 }
-

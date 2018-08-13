@@ -16,6 +16,7 @@ CcubeSVCore <- function(mydata, epi=1e-3, init=2, prior, tol=1e-20, maxiter=1e3,
   stopifnot(
     all(c("var_counts","ref_counts","normal_cn",
           "major_cn","minor_cn","purity") %in% names(mydata)))
+
   mydata <- GetCcf_sv(mydata, use=use)
 
   dn1 <- mydata$ref_counts1 + mydata$var_counts1
@@ -291,7 +292,10 @@ initialization <- function(X, init, prior) {
 VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, major_cn1,
                                              bn2, dn2, cr2, major_cn2,
                                              epi, purity, model,
-                                             fit_mult = F, fit_hyper = T) {
+                                             fit_mult = T, fit_hyper = T) {
+
+  bv1 = model$bv1
+  bv2 = model$bv2
 
   dirichletConcentration0 <- model$dirichletConcentration0
   responsibility <- model$responsibility
@@ -395,7 +399,7 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, major_cn1,
 
         qq1[jj] <- sum ( responsibility[ii, ] *  (term1_breakpoint1 + term2_breakpoint1 + term3_breakpoint1)  )
 
-        cat("qq1 ", qq1, "\n")
+        #cat("qq1 ", qq1, "\n")
       }
       bv1[ii] <- bvPool1[which.max(qq1)]
 
@@ -420,11 +424,11 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, major_cn1,
         term3_breakpoint2 <- logChoose(dn2[ii], bn2[ii])
 
         qq2[jj] <- sum ( responsibility[ii, ] *  (term1_breakpoint2 + term2_breakpoint2 + term3_breakpoint2)  )
-        cat("qq2 ", qq2, "\n")
+        #cat("qq2 ", qq2, "\n")
       }
 
 
-      #bv2[ii] <- bvPool2[which.max(qq2)]
+      bv2[ii] <- bvPool2[which.max(qq2)]
     }
 
     model$bv1 <- bv1

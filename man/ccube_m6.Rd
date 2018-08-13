@@ -35,4 +35,3 @@ a list containing model parameters
 \description{
 Run Ccube with model 6: Normal-Binomial
 }
-

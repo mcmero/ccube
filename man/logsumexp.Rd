@@ -17,4 +17,3 @@ log(sum(exp(x),dim)) a matrix of the sample size as x
 \description{
 Compute log(sum(exp(x),dim)) while avoiding numerical underflow
 }
-

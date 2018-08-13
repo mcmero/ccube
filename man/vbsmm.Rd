@@ -26,4 +26,3 @@ a list containing model parameters
 \description{
 Variational Bayesian Student-t mixture model (VB-SMM)
 }
-

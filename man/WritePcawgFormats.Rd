@@ -21,4 +21,3 @@ WritePcawgFormats(ssm, res, resultFolder, sampleName, allFormats = F,
 \description{
 Write files in PCAWG-11 formats, works for both CcubeCore and ccube_m6 output
 }
-

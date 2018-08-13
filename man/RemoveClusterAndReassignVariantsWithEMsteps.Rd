@@ -5,7 +5,8 @@
 \title{Remove a (or more) cluster and reassign its data if the cluster is nonempty}
 \usage{
 RemoveClusterAndReassignVariantsWithEMsteps(res, removeIdx, ssm = NULL,
-  label = NULL, tol = 1e-08, maxiter = 100)
+  label = NULL, tol = 1e-08, maxiter = 100, verbose = F,
+  fit_mult = T, fit_hyper = T)
 }
 \arguments{
 \item{res}{Ccube result list}
@@ -19,6 +20,8 @@ RemoveClusterAndReassignVariantsWithEMsteps(res, removeIdx, ssm = NULL,
 \item{tol}{stopping condition}
 
 \item{maxiter}{maximum iteration}
+
+\item{verbose}{show progress}
 }
 \value{
 Ccube result list
@@ -26,4 +29,3 @@ Ccube result list
 \description{
 Remove a (or more) cluster and reassign its data if the cluster is nonempty
 }
-

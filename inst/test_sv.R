@@ -6,7 +6,7 @@ source("R/util.R")
 
 set.seed(123)
 
-numSv <- 20
+numSv <- 200
 
 maxiter <- 200
 init =5
@@ -70,14 +70,14 @@ mydata <- mutate(rowwise(mydata),
                  var_counts2 = rbinom(1, total_counts2, vaf2),
                  ref_counts2 = total_counts2 - var_counts2)
 
-mydata$minor_cn2 = mydata$minor_cn1
-mydata$major_cn2 = mydata$major_cn1
-mydata$total_cn2 = mydata$total_cn1
-mydata$mult2 = mydata$mult1
-mydata$vaf2 = mydata$vaf1
-mydata$total_counts2 = mydata$total_counts1
-mydata$var_counts2 = mydata$var_counts1
-mydata$ref_counts2 = mydata$ref_counts1
+# mydata$minor_cn2 = mydata$minor_cn1
+# mydata$major_cn2 = mydata$major_cn1
+# mydata$total_cn2 = mydata$total_cn1
+# mydata$mult2 = mydata$mult1
+# mydata$vaf2 = mydata$vaf1
+# mydata$total_counts2 = mydata$total_counts1
+# mydata$var_counts2 = mydata$var_counts1
+# mydata$ref_counts2 = mydata$ref_counts1
 
 # mydata$minor_cn1 = mydata$minor_cn2
 # mydata$major_cn1 = mydata$major_cn2
@@ -97,14 +97,14 @@ cn <- unique(mydata$normal_cn)
 cr1 <- mydata$major_cn1 + mydata$minor_cn1
 major_cn1 <- mydata$major_cn1
 bv1 <- mydata$mult1
-#bv1 <- rep(1, numSv)
+bv1 <- rep(1, numSv)
 
 dn2 <- mydata$ref_counts2 + mydata$var_counts2
 bn2 <- mydata$var_counts2
 cr2 <- mydata$major_cn2 + mydata$minor_cn2
 major_cn2 <- mydata$major_cn2
 bv2 <- mydata$mult2
-#bv2 <- rep(1, numSv)
+bv2 <- rep(1, numSv)
 
 
 

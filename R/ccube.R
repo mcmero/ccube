@@ -440,7 +440,7 @@ VariationalMaximimizationStep <- function(bn, dn, cn, cr, major_cn, epi, purity,
         term1 <- sum(responsibility[ii, ] * bn[ii] * (log (aa * ccfMean +bb) - aa2*ccfCov/(2 * (aa * ccfMean +bb)^2 ) ))
         term2 <- sum(responsibility[ii, ] * (dn[ii] - bn[ii]) * (log (1 - aa * ccfMean - bb) - aa2*ccfCov/(2 * (1 - aa * ccfMean -bb)^2)  ))
         term3 <- sum( responsibility[ii, ]*  logChoose(dn[ii], bn[ii]) )
-        qq[jj] <- term1 + term2 + term3
+        qq[jj] <- term1 + term2
       }
       bv[ii] <- bvPool[which.max(qq)]
 
@@ -594,8 +594,8 @@ VariationalLowerBound <- function(bn, dn, cn, cr, epi, purity, model) {
   for(i in 1:k) {
 
     Epbk[,i] <- sum(R[,i]*(bn * (log (aa * ccfMean[i] +bb) - aa2*ccfCov[,i]/(2 * (aa * ccfMean[i] +bb)^2 ) ) +
-      (dn - bn) * (log (1 - aa * ccfMean[i] - bb) - aa2*ccfCov[,i]/(2 * (1 - aa * ccfMean[i] -bb)^2)))) +
-      sum( R[,i]*logChoose(dn, bn) )
+      (dn - bn) * (log (1 - aa * ccfMean[i] - bb) - aa2*ccfCov[,i]/(2 * (1 - aa * ccfMean[i] -bb)^2))))
+      #sum( R[,i]*logChoose(dn, bn) )
     q <- solve(t(U0), m[,i,drop=F]-m0)
     mm0Wmm0[i] <- pracma::dot(q, q)
     U <- chol(M[,i])

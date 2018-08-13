@@ -17,4 +17,3 @@ ccube data frame
 \description{
 Parse old cna_data.txt files
 }
-

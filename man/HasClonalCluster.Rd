@@ -15,4 +15,3 @@ TRUE/FALSE
 \description{
 Check if the result has a clonal cluster
 }
-

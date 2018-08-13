@@ -15,4 +15,3 @@ colors
 \description{
 Ccube color
 }
-

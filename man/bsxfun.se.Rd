@@ -21,4 +21,3 @@ value of func
 \description{
 bsxfun {pracma} with single expansion (real Matlab style)
 }
-

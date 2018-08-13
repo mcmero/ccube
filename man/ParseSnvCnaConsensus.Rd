@@ -17,4 +17,3 @@ ccube data frame
 \description{
 Parse final consensus files
 }
-
