@@ -1265,7 +1265,7 @@ WritePcawgFormats <- function(ssm, res, resultFolder, sampleName,
   if (outputSubStruct) {
     cellularity <- unique(ssm$purity)
     clusterCertainty <- as.data.frame(table(res$label), stringsAsFactors = F)
-    clusterCertainty <- rename(clusterCertainty, cluster = Var1, n_ssms = Freq)
+    clusterCertainty <- dplyr::rename(clusterCertainty, cluster = Var1, n_ssms = Freq)
     clusterCertainty$proportion <- res$full.model$ccfMean[as.integer(clusterCertainty$cluster)] * cellularity
     clusterCertainty$cluster <- seq_along(uniqLabels)
     fn <- paste0(resultFolder, "/",
