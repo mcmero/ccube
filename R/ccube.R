@@ -59,7 +59,7 @@ ccube_m6 <- function(mydata, epi=1e-3, init=2, prior=NULL, tol=1e-20, maxiter=1e
 
   dn <- mydata$ref_counts + mydata$var_counts
   bn <- mydata$var_counts
-  cn <- unique(mydata$normal_cn)
+  cn <- mydata$normal_cn
   cr <- mydata$major_cn + mydata$minor_cn
   major_cn <- mydata$major_cn
   purity <- unique(mydata$purity)
@@ -167,7 +167,7 @@ CcubeCore <- function(mydata, epi=1e-3, init=2, prior, tol=1e-20, maxiter=1e3, f
 
   dn <- mydata$ref_counts + mydata$var_counts
   bn <- mydata$var_counts
-  cn <- unique(mydata$normal_cn)
+  cn <- mydata$normal_cn
   cr <- mydata$major_cn + mydata$minor_cn
   major_cn <- mydata$major_cn
   purity <- unique(mydata$purity)
@@ -299,7 +299,7 @@ GetCcf <- function(mydata, use = c("use_base", "use_one")) {
 
     if (nrow(dd) > 0) {
       dd <- dplyr::mutate(dplyr::rowwise(dd), ccf = min(c(ccf1, ccf2, ccf3), na.rm = T ))
-      mydata[mydata$mutation_id %in% dd$mutation_id,]$ccf = dd$ccf
+      mydata[mydata$id %in% dd$id,]$ccf = dd$ccf
     }
 
     mydata <- dplyr::mutate(dplyr::rowwise(mydata),
@@ -317,8 +317,8 @@ GetCcf <- function(mydata, use = c("use_base", "use_one")) {
                                                    1, constraint = F))
 
 
-      mydata[mydata$mutation_id %in% dd1$mutation_id,]$ccf = dd1$ccf
-      mydata[mydata$mutation_id %in% dd1$mutation_id,]$mult = 1
+      mydata[mydata$id %in% dd1$id,]$ccf = dd1$ccf
+      mydata[mydata$id %in% dd1$id,]$mult = 1
     }
   }
 
@@ -434,7 +434,7 @@ VariationalMaximimizationStep <- function(bn, dn, cn, cr, major_cn, epi, purity,
       bvPool <- 1:major_cn[ii]
       qq <- rep(NA, length(bvPool))
       for (jj in seq_along(bvPool) ) {
-        aa <- purity * (bvPool[jj] *(1-epi) -cr[ii]*epi) / ((1-purity)*cn + purity * cr[ii])
+        aa <- purity * (bvPool[jj] *(1-epi) -cr[ii]*epi) / ((1-purity)*cn[ii] + purity * cr[ii])
         aa2 <- aa^2
         bb <- epi
         term1 <- sum(responsibility[ii, ] * bn[ii] * (log (aa * ccfMean +bb) - aa2*ccfCov/(2 * (aa * ccfMean +bb)^2 ) ))
@@ -940,7 +940,7 @@ RemoveClusterAndReassignVariantsWithEstep <- function(res, removeIdx, ssm = NULL
       res$full.model$dirichletConcentration <- res$full.model$dirichletConcentration0 + colSums(res$full.model$responsibility)
       res$full.model <- VarationalExpectationStep(bn = ssm$var_counts,
                                        dn = ssm$ref_counts + ssm$var_counts,
-                                       cn = unique(ssm$normal_cn),
+                                       cn = ssm$normal_cn,
                                        cr = ssm$major_cn + ssm$minor_cn,
                                        epi = 1e-3,
                                        purity = unique(ssm$purity),
@@ -986,7 +986,7 @@ RemoveClusterAndReassignVariantsWithEstep <- function(res, removeIdx, ssm = NULL
       res$dirichletConcentration <- res$dirichletConcentration0 + colSums(res$responsibility)
       res <- VarationalExpectationStep(bn = ssm$var_counts,
                                        dn = ssm$ref_counts + ssm$var_counts,
-                                       cn = unique(ssm$normal_cn),
+                                       cn = ssm$normal_cn,
                                        cr = ssm$major_cn + ssm$minor_cn,
                                        epi = 1e-3,
                                        purity = unique(ssm$purity),
@@ -1058,7 +1058,7 @@ RemoveClusterAndReassignVariantsWithEMsteps <- function(res, removeIdx, ssm = NU
 
         res$full.model <- VarationalExpectationStep(bn = ssm$var_counts,
                                                     dn = ssm$ref_counts + ssm$var_counts,
-                                                    cn = unique(ssm$normal_cn),
+                                                    cn = ssm$normal_cn,
                                                     cr = ssm$major_cn + ssm$minor_cn,
                                                     epi = 1e-3,
                                                     purity = unique(ssm$purity),
@@ -1066,7 +1066,7 @@ RemoveClusterAndReassignVariantsWithEMsteps <- function(res, removeIdx, ssm = NU
 
         res$full.model <- VariationalMaximimizationStep(bn = ssm$var_counts,
                                                         dn = ssm$ref_counts + ssm$var_counts,
-                                                        cn = unique(ssm$normal_cn),
+                                                        cn = ssm$normal_cn,
                                                         cr = ssm$major_cn + ssm$minor_cn,
                                                         major_cn = ssm$major_cn,
                                                         epi = 1e-3,
@@ -1076,7 +1076,7 @@ RemoveClusterAndReassignVariantsWithEMsteps <- function(res, removeIdx, ssm = NU
 
         ll[vbiter] = VariationalLowerBound(bn = ssm$var_counts,
                                    dn = ssm$ref_counts + ssm$var_counts,
-                                   cn = unique(ssm$normal_cn),
+                                   cn = ssm$normal_cn,
                                    cr = ssm$major_cn + ssm$minor_cn,
                                    epi = 1e-3,
                                    purity = unique(ssm$purity),
@@ -1128,7 +1128,7 @@ RemoveClusterAndReassignVariantsWithEMsteps <- function(res, removeIdx, ssm = NU
     if(!is.null(ssm)) {
       res <- VarationalExpectationStep(bn = ssm$var_counts,
                                        dn = ssm$ref_counts + ssm$var_counts,
-                                       cn = unique(ssm$normal_cn),
+                                       cn = ssm$normal_cn,
                                        cr = ssm$major_cn + ssm$minor_cn,
                                        epi = 1e-3,
                                        purity = unique(ssm$purity),
