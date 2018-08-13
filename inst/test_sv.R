@@ -4,14 +4,13 @@ library(ccube)
 source("R/ccube_sv.R")
 source("R/util.R")
 
-set.seed(123)
+set.seed(1234)
 
-numSv <- 200
-
+numSv <- 100
 maxiter <- 200
-init =5
-baseDepth = 50
-ccfSet <- c(1, 0.3, 0.7)
+init =5  # number of clusters
+baseDepth = 40
+ccfSet <- c(1, 0.3, 0.7) # true ccf pool
 ccfTrue <- sample(ccfSet, numSv, c(0.5,0.3,0.2), replace = T)
 
 purity <- 0.8
@@ -22,8 +21,8 @@ cnPoolMin <- c(0,1,2)
 
 
 # 1st break point
-cnProfile1 <- sample(cnPoolMaj, numSv, c(0.6, 0.2, 0.1,0.1), replace =T)
-cnProfile2 <- sample(cnPoolMin, numSv, c(0.2, 0.6, 0.2), replace =T)
+cnProfile1 <- sample(cnPoolMaj, numSv, c(0.25, 0.25, 0.25,0.25), replace =T)
+cnProfile2 <- sample(cnPoolMin, numSv, c(1/3, 1/3, 1/3), replace =T)
 
 cnProfileTot <- cnProfile1 + cnProfile2
 
@@ -70,23 +69,8 @@ mydata <- mutate(rowwise(mydata),
                  var_counts2 = rbinom(1, total_counts2, vaf2),
                  ref_counts2 = total_counts2 - var_counts2)
 
-# mydata$minor_cn2 = mydata$minor_cn1
-# mydata$major_cn2 = mydata$major_cn1
-# mydata$total_cn2 = mydata$total_cn1
-# mydata$mult2 = mydata$mult1
-# mydata$vaf2 = mydata$vaf1
-# mydata$total_counts2 = mydata$total_counts1
-# mydata$var_counts2 = mydata$var_counts1
-# mydata$ref_counts2 = mydata$ref_counts1
 
-# mydata$minor_cn1 = mydata$minor_cn2
-# mydata$major_cn1 = mydata$major_cn2
-# mydata$total_cn1 = mydata$total_cn2
-# mydata$mult1 = mydata$mult2
-# mydata$vaf1 = mydata$vaf2
-# mydata$total_counts1 = mydata$total_counts2
-# mydata$var_counts1 = mydata$var_counts2
-# mydata$ref_counts1 = mydata$ref_counts2
+# Inference
 
 
 mydata <- GetCcf_sv(mydata, use="use_base")
@@ -96,14 +80,12 @@ bn1 <- mydata$var_counts1
 cn <- unique(mydata$normal_cn)
 cr1 <- mydata$major_cn1 + mydata$minor_cn1
 major_cn1 <- mydata$major_cn1
-bv1 <- mydata$mult1
 bv1 <- rep(1, numSv)
 
 dn2 <- mydata$ref_counts2 + mydata$var_counts2
 bn2 <- mydata$var_counts2
 cr2 <- mydata$major_cn2 + mydata$minor_cn2
 major_cn2 <- mydata$major_cn2
-bv2 <- mydata$mult2
 bv2 <- rep(1, numSv)
 
 
@@ -122,7 +104,6 @@ prior <- list(
   invWhishartScale = var(rawCcf)*(d+1)
 )
 
-# variational lower bound (objective function)
 
 L <- rep(-Inf, maxiter)
 converged <- FALSE
@@ -145,8 +126,11 @@ model$invWhishartScale <- prior$invWhishartScale
 
 
 epi=1e-3
+
+# SV prototype
+
 for (ii in 1:maxiter) {
-  cat(ii, "\n")
+
   model <- VariationalMaximimizationStep_sv(bn1, dn1, cn, cr1, major_cn1,
                                             bn2, dn2, cr2, major_cn2,
                                             epi, purity, model,
@@ -159,6 +143,7 @@ for (ii in 1:maxiter) {
   L[ii] <- VariationalLowerBound_sv(bn1, dn1, cn, cr1,
                                     bn2, dn2, cr2,
                                     epi, purity, model)/n
+  cat(ii, "\r")
 }
 
 nk <- colSums(model$responsibility)
@@ -204,19 +189,23 @@ mydata <- mutate(rowwise(mydata),
                                                    constraint=F)
                  )
 myColors=gg_color_hue(10)
-par(mfrow=c(2,2))
 
+fn1 = "~/Desktop/double_break_points_results.pdf"
+pdf(fn1, width=8, height=8)
+
+par(mfrow=c(2,2))
 plot(mydata$true_obs_ccf1, mydata$ccube_ccf1, col = myColors[label],
-     xlim = c(0, max( c(mydata$true_obs_ccf1, mydata$ccube_ccf1) ) ) ,
-     ylim = c(0, max( c(mydata$true_obs_ccf1, mydata$ccube_ccf1) ) )
-     )
+     xlim = c(0, max( c(mydata$true_obs_ccf1, mydata$ccube_ccf1) ) ),
+     ylim = c(0, max( c(mydata$true_obs_ccf1, mydata$ccube_ccf1) ) ),
+     xlab = "true ccf", ylab = "estimated ccf", main = "1st break point")
 points( seq(0, max( c(mydata$true_obs_ccf1, mydata$ccube_ccf1) ), length.out = 100 ),
           seq(0, max( c(mydata$true_obs_ccf1, mydata$ccube_ccf1) ), length.out = 100 ),
         type = "l" )
 
 plot(mydata$true_obs_ccf2, mydata$ccube_ccf2, col = myColors[label],
-     xlim = c(0, max( c(mydata$true_obs_ccf2, mydata$ccube_ccf2) ) ) ,
-     ylim = c(0, max( c(mydata$true_obs_ccf2, mydata$ccube_ccf2) ) )
+     xlim = c(0, max( c(mydata$true_obs_ccf2, mydata$ccube_ccf2) ) ),
+     ylim = c(0, max( c(mydata$true_obs_ccf2, mydata$ccube_ccf2) ) ),
+     xlab = "true ccf", ylab = "estimated ccf", main = "2nd break point"
 )
 
 points( seq(0, max( c(mydata$true_obs_ccf2, mydata$ccube_ccf2) ), length.out = 100 ),
@@ -230,9 +219,11 @@ barplot(tableSv, las = 2, col = myColors[sort(uniqLabels)],
         xlab = "cluster mean", ylab="number of variants",
         main = "cluster prevalence")
 
-plot(L, col = myColors[5], type = "p")
+plot(L, col = myColors[5], type = "p", ylab = "ELBO", xlab = "iteration")
 
+dev.off()
 
+# Run ccube seperately
 
 mydata1 = mydata[, c("mutation_id", "var_counts1", "ref_counts1", "major_cn1", "minor_cn1", "purity", "normal_cn")]
 mydata1 = dplyr::rename(mydata1, var_counts = var_counts1, ref_counts = ref_counts1, major_cn = major_cn1, minor_cn = minor_cn1)
@@ -248,20 +239,23 @@ mydata1 <- mutate(rowwise(mydata1),
                                             major_cn + minor_cn,
                                             ccube_mult,
                                             constraint=F) )
-MakeCcubeStdPlot(mydata1, res1)
-#
-# mydata2= mydata[, c("mutation_id", "var_counts2", "ref_counts2", "major_cn2", "minor_cn2", "purity", "normal_cn")]
-# mydata2 = dplyr::rename(mydata2, var_counts = var_counts2, ref_counts = ref_counts2, major_cn = major_cn2, minor_cn = minor_cn2)
-# res2 <- CcubeCore(mydata = mydata2, init = 5, fit_mult = T, use = "use_one", verbose = T)
-# mydata2$ccube_ccf_mean <- res2$full.model$ccfMean[res2$label]
-# mydata2$ccube_mult <- res2$full.model$bv
-# mydata2 <- mutate(rowwise(mydata2),
-#                   vaf = var_counts/(var_counts+ref_counts),
-#                   ccube_ccf = MapVaf2CcfPyClone(vaf,
-#                                                 purity,
-#                                                 normal_cn,
-#                                                 major_cn + minor_cn,
-#                                                 major_cn + minor_cn,
-#                                                 ccube_mult,
-#                                                 constraint=F) )
-# MakeCcubeStdPlot(mydata2, res2)
+
+fn2 = "~/Desktop/ccube_1st_breakpoint.pdf"
+MakeCcubeStdPlot(mydata1, res1, printPlot = T, fn = fn2)
+
+mydata2= mydata[, c("mutation_id", "var_counts2", "ref_counts2", "major_cn2", "minor_cn2", "purity", "normal_cn")]
+mydata2 = dplyr::rename(mydata2, var_counts = var_counts2, ref_counts = ref_counts2, major_cn = major_cn2, minor_cn = minor_cn2)
+res2 <- CcubeCore(mydata = mydata2, init = 5, fit_mult = T, use = "use_one", verbose = T)
+mydata2$ccube_ccf_mean <- res2$full.model$ccfMean[res2$label]
+mydata2$ccube_mult <- res2$full.model$bv
+mydata2 <- mutate(rowwise(mydata2),
+                  vaf = var_counts/(var_counts+ref_counts),
+                  ccube_ccf = MapVaf2CcfPyClone(vaf,
+                                                purity,
+                                                normal_cn,
+                                                major_cn + minor_cn,
+                                                major_cn + minor_cn,
+                                                ccube_mult,
+                                                constraint=F) )
+fn3 = "~/Desktop/ccube_2nd_breakpoint.pdf"
+MakeCcubeStdPlot(mydata2, res2, printPlot = T, fn = fn3)
