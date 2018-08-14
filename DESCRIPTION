@@ -18,3 +18,9 @@ Imports:
     dplyr,
     monomvn
 RoxygenNote: 6.1.0
+Collate: 
+    'ccube.R'
+    'ccube_sv.R'
+    'util.R'
+    'vbgmm.R'
+    'vbsmm.R'

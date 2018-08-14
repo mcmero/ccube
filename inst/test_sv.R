@@ -2,6 +2,7 @@ rm(list = ls())
 library(dplyr)
 library(ccube)
 source("R/ccube_sv.R")
+source("R/ccube.R")
 source("R/util.R")
 
 set.seed(1234)
@@ -70,92 +71,14 @@ mydata <- mutate(rowwise(mydata),
                  ref_counts2 = total_counts2 - var_counts2)
 
 
-# Inference
-
-
-mydata <- GetCcf_sv(mydata, use="use_base")
-
-dn1 <- mydata$ref_counts1 + mydata$var_counts1
-bn1 <- mydata$var_counts1
-cn <- unique(mydata$normal_cn)
-cr1 <- mydata$major_cn1 + mydata$minor_cn1
-major_cn1 <- mydata$major_cn1
-bv1 <- rep(1, numSv)
-
-dn2 <- mydata$ref_counts2 + mydata$var_counts2
-bn2 <- mydata$var_counts2
-cr2 <- mydata$major_cn2 + mydata$minor_cn2
-major_cn2 <- mydata$major_cn2
-bv2 <- rep(1, numSv)
-
-
-
-purity <- unique(mydata$purity)
-rawCcf <- mydata$ccf
-rawCcf <- as.matrix(rawCcf)
-n <- nrow(rawCcf)
-d <- ncol(rawCcf)
-
-X <- t(rawCcf) # Work with D by N for convenience
-
-prior <- list(
-  dirichletConcentration = 1e-2,
-  normalMean = 1,
-  invWhishartScale = var(rawCcf)*(d+1)
-)
-
-
-L <- rep(-Inf, maxiter)
-converged <- FALSE
-degenerated <- FALSE
-vbiter <- 1
-
-model <- list()
-
-initParams <- initialization(X, init, prior) # initialize responsibility and hidden scale
-model$responsibility <- initParams$R
-
-model$ccfMean <- initParams$ccfMean
-model$ccfCov <- initParams$ccfCov
-
-model$bv1 <- bv1
-model$bv2 <- bv2
-model$dirichletConcentration0 <- prior$dirichletConcentration
-model$normalMean <- prior$normalMean
-model$invWhishartScale <- prior$invWhishartScale
-
-
-epi=1e-3
 
 # SV prototype
+res <- ccube::CcubeSVCore(mydata = mydata, init = init, fit_mult = T, use = "use_base", verbose = T)
 
-for (ii in 1:maxiter) {
+label = res$label
 
-  model <- VariationalMaximimizationStep_sv(bn1, dn1, cn, cr1, major_cn1,
-                                            bn2, dn2, cr2, major_cn2,
-                                            epi, purity, model,
-                                            fit_mult = T, fit_hyper = T)
-
-  model <- VarationalExpectationStep_sv(bn1, dn1, cn, cr1,
-                                        bn2, dn2, cr2,
-                                        epi, purity, model, no.weights = FALSE)
-
-  L[ii] <- VariationalLowerBound_sv(bn1, dn1, cn, cr1,
-                                    bn2, dn2, cr2,
-                                    epi, purity, model)/n
-  cat(ii, "\r")
-}
-
-nk <- colSums(model$responsibility)
-Epi <- (model$dirichletConcentration + nk) / (init*model$dirichletConcentration0 + n)
-model$Epi <- Epi/sum(Epi)
-
-model <- ccube:::SortClusters(model)
-
-label <- apply(model$responsibility, 1, which.max)
-
-mydata$ccube_mult1 <- model$bv1
-mydata$ccube_mult2 <- model$bv2
+mydata$ccube_mult1 <- res$full.model$bv1
+mydata$ccube_mult2 <- res$full.model$bv2
 mydata <- mutate(rowwise(mydata),
                   vaf1 = var_counts1/(var_counts1+ref_counts1),
                   ccube_ccf1 = MapVaf2CcfPyClone(vaf1,
@@ -214,12 +137,12 @@ points( seq(0, max( c(mydata$true_obs_ccf2, mydata$ccube_ccf2) ), length.out = 1
 
 tableSv <- table(label)
 uniqLabels = unique(label)
-names(tableSv) <- as.character(format(round(model$ccfMean[sort(uniqLabels)], 2), nsmall = 2))
+names(tableSv) <- as.character(format(round(res$full.model$ccfMean[sort(uniqLabels)], 2), nsmall = 2))
 barplot(tableSv, las = 2, col = myColors[sort(uniqLabels)],
         xlab = "cluster mean", ylab="number of variants",
         main = "cluster prevalence")
 
-plot(L, col = myColors[5], type = "p", ylab = "ELBO", xlab = "iteration")
+plot(res$L, col = myColors[5], type = "p", ylab = "ELBO", xlab = "iteration")
 
 dev.off()
 

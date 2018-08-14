@@ -1,3 +1,6 @@
+#'@include ccube.R
+NULL
+
 #' Run Ccube Core function for SV
 #' @param mydata mutation data frame
 #' @param epi sequencing error
@@ -14,8 +17,9 @@
 CcubeSVCore <- function(mydata, epi=1e-3, init=2, prior, tol=1e-20, maxiter=1e3, fit_mult = F, fit_hyper = T, use = c("use_base", "use_one"),verbose=FALSE) {
 
   stopifnot(
-    all(c("var_counts","ref_counts","normal_cn",
-          "major_cn","minor_cn","purity") %in% names(mydata)))
+    all(c("var_counts1","ref_counts1","normal_cn",
+          "major_cn1","minor_cn1","purity", "var_counts2","ref_counts2",
+          "major_cn2","minor_cn2") %in% names(mydata)))
 
   mydata <- GetCcf_sv(mydata, use=use)
 
@@ -83,10 +87,16 @@ CcubeSVCore <- function(mydata, epi=1e-3, init=2, prior, tol=1e-20, maxiter=1e3,
 
   while(!converged & vbiter < maxiter & !degenerated) {
     vbiter <- vbiter + 1
-    model <- VariationalMaximimizationStep_sv(bn, dn, cn, cr, major_cn, epi, purity, model,
-                                           fit_mult = fit_mult, fit_hyper = fit_hyper)
-    model <- VarationalExpectationStep_sv(bn, dn, cn, cr, epi, purity, model)
-    L[vbiter] <- VariationalLowerBound_sv(bn, dn, cn, cr, epi, purity, model)/n
+    model <- VariationalMaximimizationStep_sv(bn1, dn1, cn, cr1, major_cn1,
+                                              bn2, dn2, cr2, major_cn2,
+                                              epi, purity, model,
+                                              fit_mult = fit_mult, fit_hyper = fit_hyper)
+    model <- model <- VarationalExpectationStep_sv(bn1, dn1, cn, cr1,
+                                                   bn2, dn2, cr2,
+                                                   epi, purity, model)
+    L[vbiter] <- VariationalLowerBound_sv(bn1, dn1, cn, cr1,
+                                          bn2, dn2, cr2,
+                                          epi, purity, model)/n
     converged <- abs(L[vbiter] - L[vbiter-1]) < (tol) * abs(L[vbiter])
     degenerated <- (L[vbiter] - L[vbiter-1]) < 0
     #degenerated = F
@@ -383,16 +393,6 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, major_cn1,
         w1w1 <- w1^2
         ef1 <- w1 * ccfMean +epi
 
-        # aa <- purity * (bvPool1[jj] *(1-epi) -cr1[ii]*epi) / ((1-purity)*cn + purity * cr1[ii])
-        # aa2 <- aa^2
-        # bb <- epi
-        #
-        # term1 <- sum(responsibility[ii, ] * bn1[ii] * (log (aa * ccfMean +bb) - aa2*ccfCov/(2 * (aa * ccfMean +bb)^2 ) ))
-        # term2 <- sum(responsibility[ii, ] * (dn1[ii] - bn1[ii]) * (log (1 - aa * ccfMean - bb) - aa2*ccfCov/(2 * (1 - aa * ccfMean -bb)^2)  ))
-        # term3 <- sum( responsibility[ii, ]*  logChoose(dn1[ii], bn1[ii]) )
-        #
-        # qq1[jj] <- term1 + term2 + term3
-
         term1_breakpoint1 <- bn1[ii] * (log (ef1) - w1w1*ccfCov/(2 * ef1^2 ) )
         term2_breakpoint1 <- (dn1[ii] - bn1[ii]) * (log (1 - ef1) - w1w1*ccfCov/(2 * (1 - ef1)^2)  )
         term3_breakpoint1 <- logChoose(dn1[ii], bn1[ii])
@@ -410,14 +410,6 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, major_cn1,
         w2 <- purity * (bvPool2[jj] *(1-epi) -cr2[ii]*epi) / ((1-purity)*cn + purity * cr2[ii])
         w2w2 <- w2^2
         ef2 <- w2 * ccfMean +epi
-
-        # aa <- purity * (bvPool[jj] *(1-epi) -cr[ii]*epi) / ((1-purity)*cn + purity * cr[ii])
-        # aa2 <- aa^2
-        # bb <- epi
-
-        # term1 <- sum(responsibility[ii, ] * bn[ii] * (log (aa * ccfMean +bb) - aa2*ccfCov/(2 * (aa * ccfMean +bb)^2 ) ))
-        # term2 <- sum(responsibility[ii, ] * (dn[ii] - bn[ii]) * (log (1 - aa * ccfMean - bb) - aa2*ccfCov/(2 * (1 - aa * ccfMean -bb)^2)  ))
-        # term3 <- sum( responsibility[ii, ]*  logChoose(dn[ii], bn[ii]) )
 
         term1_breakpoint2 <- bn2[ii] * (log (ef2) - w2w2*ccfCov/(2 * ef2^2 ) )
         term2_breakpoint2 <- (dn2[ii] - bn2[ii]) * (log (1 - ef2) - w2w2*ccfCov/(2 * (1 - ef2)^2)  )
