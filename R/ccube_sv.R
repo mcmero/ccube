@@ -1,6 +1,3 @@
-#'@include ccube.R
-NULL
-
 #' Run Ccube Core function for SV
 #' @param mydata mutation data frame
 #' @param epi sequencing error
