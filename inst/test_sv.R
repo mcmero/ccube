@@ -1,9 +1,7 @@
 rm(list = ls())
 library(dplyr)
 library(ccube)
-source("R/ccube_sv.R")
-source("R/ccube.R")
-source("R/util.R")
+
 
 set.seed(1234)
 
@@ -73,7 +71,7 @@ mydata <- mutate(rowwise(mydata),
 
 
 # SV prototype
-res <- ccube::CcubeSVCore(mydata = mydata, init = init, fit_mult = T, use = "use_base", verbose = T)
+res <- CcubeSVCore(mydata = mydata, init = init, fit_mult = T, use = "use_base", verbose = T)
 
 label = res$label
 

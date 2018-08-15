@@ -274,28 +274,28 @@ GetCcf_sv <- function(mydata, use = c("use_base", "use_one")) {
 
 
 ############ helper function to initialize responsibility and other parameters ############
-initialization <- function(X, init, prior) {
-
-  d <- nrow(X)
-
-  n <- ncol(X)
-
-  stopifnot(length(init) %in% c(1, n) || (nrow(init) == d  & ncol(init) == k))
-
-  k <- init
-  res <- kmeans(t(X), k)
-  label <- res$cluster
-  normalMean <- t(res$centers)
-  if (length(which(normalMean > 1) ) >0 ){
-    normalMean[which(normalMean>1)] = 1
-  }
-  R <- as.matrix(Matrix::sparseMatrix(1:n, label, x=1))
-  invWhishartScale <- prior$invWhishartScale
-  ccfMean = unname(normalMean)
-  ccfCov = array(invWhishartScale, dim = c(d,k))
-
-  return(list(R = R, ccfMean = ccfMean, ccfCov = ccfCov))
-}
+# initialization <- function(X, init, prior) {
+#
+#   d <- nrow(X)
+#
+#   n <- ncol(X)
+#
+#   stopifnot(length(init) %in% c(1, n) || (nrow(init) == d  & ncol(init) == k))
+#
+#   k <- init
+#   res <- kmeans(t(X), k)
+#   label <- res$cluster
+#   normalMean <- t(res$centers)
+#   if (length(which(normalMean > 1) ) >0 ){
+#     normalMean[which(normalMean>1)] = 1
+#   }
+#   R <- as.matrix(Matrix::sparseMatrix(1:n, label, x=1))
+#   invWhishartScale <- prior$invWhishartScale
+#   ccfMean = unname(normalMean)
+#   ccfCov = array(invWhishartScale, dim = c(d,k))
+#
+#   return(list(R = R, ccfMean = ccfMean, ccfCov = ccfCov))
+# }
 
 
 ############ Variational-Maximimization ############
