@@ -395,8 +395,6 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, major_cn1,
         term3_breakpoint1 <- logChoose(dn1[ii], bn1[ii])
 
         qq1[jj] <- sum ( responsibility[ii, ] *  (term1_breakpoint1 + term2_breakpoint1 + term3_breakpoint1)  )
-
-        #cat("qq1 ", qq1, "\n")
       }
       bv1[ii] <- bvPool1[which.max(qq1)]
 
@@ -413,7 +411,6 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, major_cn1,
         term3_breakpoint2 <- logChoose(dn2[ii], bn2[ii])
 
         qq2[jj] <- sum ( responsibility[ii, ] *  (term1_breakpoint2 + term2_breakpoint2 + term3_breakpoint2)  )
-        #cat("qq2 ", qq2, "\n")
       }
 
 
@@ -666,12 +663,12 @@ MakeCcubeStdPlot_sv <- function(ssm, res, myColors=gg_color_hue(10), printPlot =
   }
 
   par(mfrow=c(2,2))
-  plot(ssm$ccube_ccf, ssm$vaf, col = myColors[res$label],
+  plot(ssm$ccube_ccf1, ssm$vaf1, col = myColors[res$label],
        xlab = "cancer cell fraction", ylab = "variant allele frequecy",
-       main = "ccf vs vaf (colored by cluster memebership)")
+       main = "break point 1: ccf vs vaf \n(colored by cluster memebership)")
   cellularity <- unique(ssm$purity)
-  ssm$total_cn =ssm$major_cn+ssm$minor_cn
-  uniqueTotCn = unique(ssm$total_cn)
+  ssm$total_cn1 =ssm$major_cn1+ssm$minor_cn1
+  uniqueTotCn = unique(ssm$total_cn1)
   xx = seq(0,2, length.out = 100)
   for (cn in uniqueTotCn) {
     for (i in 1:cn) {
@@ -679,6 +676,18 @@ MakeCcubeStdPlot_sv <- function(ssm, res, myColors=gg_color_hue(10), printPlot =
     }
   }
 
+  plot(ssm$ccube_ccf2, ssm$vaf2, col = myColors[res$label],
+       xlab = "cancer cell fraction", ylab = "variant allele frequecy",
+       main = "break point 2: ccf vs vaf \n(colored by cluster memebership)")
+  cellularity <- unique(ssm$purity)
+  ssm$total_cn2 =ssm$major_cn2+ssm$minor_cn2
+  uniqueTotCn = unique(ssm$total_cn2)
+  xx = seq(0,2, length.out = 100)
+  for (cn in uniqueTotCn) {
+    for (i in 1:cn) {
+      lines(MapVaf2CcfPyClone(xx, cellularity, 2, cn, cn, i, constraint = F), xx, lty = 6, col = 80)
+    }
+  }
 
   if (is.matrix(res$full.model$ccfMean)) {
     Emu <- res$full.model$ccfMean[,]
@@ -702,11 +711,11 @@ MakeCcubeStdPlot_sv <- function(ssm, res, myColors=gg_color_hue(10), printPlot =
     ll <- ll + params[j,]$Epi * dnorm(xx, mean = params[j,]$Emu, sd = sqrt(params[j,]$Esigma))
   }
 
-  hist(ssm$ccube_ccf, density=20, breaks=20, prob=TRUE,
-       main = "ccf histogram +
-       cluster uncertainties",
-       xlab = "cancer cell fraction")
-  lines(xx,ll, lwd=2, col = "darkred")
+  hist(ssm$ccube_ccf1, density=20, breaks=20, prob=TRUE,
+       main = "ccf histograms \n(red: break point 1, blue: break point 2) + \ncluster uncertainties",
+       xlab = "cancer cell fraction", col =  "red")
+  hist(ssm$ccube_ccf2, density=20, breaks=20, prob=TRUE, col = "blue", add = T)
+  lines(xx,ll, lwd=3, col = "darkred")
 
   numSnv <- table(res$label)
   uniqLabels = unique(res$label)
@@ -723,14 +732,15 @@ MakeCcubeStdPlot_sv <- function(ssm, res, myColors=gg_color_hue(10), printPlot =
 #' Remove empty clusters
 #' @param res Ccube result list
 #' @param ssm Ccub input data
+#' @param epi sequencing error
 #' @return Ccube result list
 #' @export
-CullEmptyClusters_sv <- function(res, ssm, useEstep = T) {
+CullEmptyClusters_sv <- function(res, ssm, useEstep = T, epi = 1e-3) {
 
   idx <- which(! seq_along(res$full.model$ccfMean) %in% unique(res$label) )
 
   if (useEstep) {
-    return(RemoveClusterAndReassignVariantsWithEstep_sv(res = res, removeIdx = idx, ssm = ssm))
+    return(RemoveClusterAndReassignVariantsWithEstep_sv(res = res, removeIdx = idx, ssm = ssm, epi = epi))
   } else {
     return(RemoveClusterAndReassignVariants_sv(res = res, removeIdx = idx, ssm = ssm))
   }
@@ -739,15 +749,17 @@ CullEmptyClusters_sv <- function(res, ssm, useEstep = T) {
 #' Remove small clusters
 #' @param res Ccube result list
 #' @param ssm Ccub input data
+#' @param tol threshold for small clusters
+#' @param epi sequencing error
 #' @return Ccube result list
 #' @export
-CullSmallClusters_sv <- function(res, ssm, tol = 1e-2, useEstep = T) {
+CullSmallClusters_sv <- function(res, ssm, tol = 1e-2, epi = 1e-3,  useEstep = T) {
 
   tt <- table(res$label)
   idx <- which( tt/sum(tt) < tol )
 
   if (useEstep) {
-    return(RemoveClusterAndReassignVariantsWithEstep_sv(res = res, removeIdx = idx, ssm = ssm))
+    return(RemoveClusterAndReassignVariantsWithEstep_sv(res = res, removeIdx = idx, ssm = ssm, epi = epi))
   } else {
     return(RemoveClusterAndReassignVariants_sv(res = res, removeIdx = idx, ssm = ssm))
   }
@@ -855,9 +867,10 @@ RemoveClusterAndReassignVariants_sv <- function(res, removeIdx, ssm = NULL, labe
 #' @param  removeIdx clusters to remove
 #' @param ssm data
 #' @param label assigned labels if res doesn't have label variable
+#' @param epi sequencing error
 #' @return Ccube result list
 #' @export
-RemoveClusterAndReassignVariantsWithEstep_sv <- function(res, removeIdx, ssm = NULL, label = NULL) {
+RemoveClusterAndReassignVariantsWithEstep_sv <- function(res, removeIdx, ssm = NULL, label = NULL, epi = 1e-3) {
 
   if (length(removeIdx) == 0) {
     return(res)
@@ -895,13 +908,19 @@ RemoveClusterAndReassignVariantsWithEstep_sv <- function(res, removeIdx, ssm = N
     res$full.model$responsibility <- exp(res$full.model$logResponsibility)
     if(!is.null(ssm)) {
       res$full.model$dirichletConcentration <- res$full.model$dirichletConcentration0 + colSums(res$full.model$responsibility)
-      res$full.model <- VarationalExpectationStep_sv(bn = ssm$var_counts,
-                                       dn = ssm$ref_counts + ssm$var_counts,
-                                       cn = unique(ssm$normal_cn),
-                                       cr = ssm$major_cn + ssm$minor_cn,
-                                       epi = 1e-3,
-                                       purity = unique(ssm$purity),
-                                       model = res$full.model)
+      res$full.model <- VarationalExpectationStep_sv(bn1 = ssm$var_counts1,
+                                                     dn1 = ssm$ref_counts1 + ssm$var_counts1,
+                                                     cn = unique(ssm$normal_cn),
+                                                     cr1 = ssm$major_cn1 + ssm$minor_cn1,
+                                                     bn2 = ssm$var_counts2,
+                                                     dn2 = ssm$ref_counts2 + ssm$var_counts2,
+                                                     cr2 = ssm$major_cn2 + ssm$minor_cn2,
+                                                     epi = epi,
+                                                     purity = unique(ssm$purity),
+                                                     model = res$full.model)
+
+      res$full.model <- SortClusters(res$full.model)
+
       res$label <- apply(res$full.model$responsibility, 1, which.max)
       res$full.model$dirichletConcentration <- res$full.model$dirichletConcentration0 + colSums(res$full.model$responsibility)
     }
@@ -921,36 +940,6 @@ RemoveClusterAndReassignVariantsWithEstep_sv <- function(res, removeIdx, ssm = N
       res$full.model$Epi <- Epi/sum(Epi)
     }
 
-  } else {
-
-    res$ccfMean <- res$ccfMean[-removeIdx]
-    res$ccfCov <- res$ccfCov[-removeIdx]
-
-    logRho <- res$logResponsibility[, -removeIdx]
-
-    if (!is.matrix(logRho)) {
-      logRho <- as.matrix(logRho)
-    }
-
-    res$logResponsibility <-
-      if (length(label) ==length(res$ccfMean)) {
-        bsxfun.se("-", logRho, logsumexp(logRho, 1), expandByRow = F)	# 10.49
-      } else {
-        bsxfun.se("-", logRho, logsumexp(logRho, 1))	# 10.49
-      }
-
-    if(!is.null(ssm)) {
-      res$dirichletConcentration <- res$dirichletConcentration0 + colSums(res$responsibility)
-      res <- VarationalExpectationStep(bn = ssm$var_counts,
-                                       dn = ssm$ref_counts + ssm$var_counts,
-                                       cn = unique(ssm$normal_cn),
-                                       cr = ssm$major_cn + ssm$minor_cn,
-                                       epi = 1e-3,
-                                       purity = unique(ssm$purity),
-                                       model = res)
-      res$dirichletConcentration <- res$dirichletConcentration0 + colSums(res$responsibility)
-    }
-
   }
 
   res
@@ -963,10 +952,11 @@ RemoveClusterAndReassignVariantsWithEstep_sv <- function(res, removeIdx, ssm = N
 #' @param label assigned labels if res doesn't have label variable
 #' @param tol stopping condition
 #' @param maxiter maximum iteration
+#' @param epi sequencing error
 #' @param verbose show progress
 #' @return Ccube result list
 #' @export
-RemoveClusterAndReassignVariantsWithEMsteps_sv <- function(res, removeIdx, ssm = NULL, label = NULL, tol = 1e-8, maxiter = 100, verbose = F,
+RemoveClusterAndReassignVariantsWithEMsteps_sv <- function(res, removeIdx, ssm = NULL, label = NULL, tol = 1e-8, maxiter = 100, epi = 1e-3, verbose = F,
                                                         fit_mult = T, fit_hyper = T) {
 
   if (length(removeIdx) == 0) {
@@ -1013,20 +1003,27 @@ RemoveClusterAndReassignVariantsWithEMsteps_sv <- function(res, removeIdx, ssm =
       while (!converged & vbiter < maxiter & !degenerated) {
         vbiter = vbiter + 1
 
-        res$full.model <- VarationalExpectationStep(bn = ssm$var_counts,
-                                                    dn = ssm$ref_counts + ssm$var_counts,
-                                                    cn = unique(ssm$normal_cn),
-                                                    cr = ssm$major_cn + ssm$minor_cn,
-                                                    epi = 1e-3,
-                                                    purity = unique(ssm$purity),
-                                                    model = res$full.model)
+        res$full.model <- VarationalExpectationStep_sv(bn1 = ssm$var_counts1,
+                                                       dn1 = ssm$ref_counts1 + ssm$var_counts1,
+                                                       cn = unique(ssm$normal_cn),
+                                                       cr1 = ssm$major_cn1 + ssm$minor_cn1,
+                                                       bn2 = ssm$var_counts2,
+                                                       dn2 = ssm$ref_counts2 + ssm$var_counts2,
+                                                       cr2 = ssm$major_cn2 + ssm$minor_cn2,
+                                                       epi = epi,
+                                                       purity = unique(ssm$purity),
+                                                       model = res$full.model)
 
-        res$full.model <- VariationalMaximimizationStep(bn = ssm$var_counts,
-                                                        dn = ssm$ref_counts + ssm$var_counts,
+        res$full.model <- VariationalMaximimizationStep_sv(bn1 = ssm$var_counts1,
+                                                        dn1 = ssm$ref_counts1 + ssm$var_counts1,
                                                         cn = unique(ssm$normal_cn),
-                                                        cr = ssm$major_cn + ssm$minor_cn,
-                                                        major_cn = ssm$major_cn,
-                                                        epi = 1e-3,
+                                                        cr1 = ssm$major_cn1 + ssm$minor_cn1,
+                                                        major_cn1 = ssm$major_cn1,
+                                                        bn2 = ssm$var_counts2,
+                                                        dn2 = ssm$ref_counts2 + ssm$var_counts2,
+                                                        cr2 = ssm$major_cn2 + ssm$minor_cn2,
+                                                        major_cn2 = ssm$major_cn2,
+                                                        epi = epi,
                                                         purity = unique(ssm$purity),
                                                         model = res$full.model,fit_mult = fit_mult,
                                                         fit_hyper = fit_hyper)
@@ -1044,6 +1041,8 @@ RemoveClusterAndReassignVariantsWithEMsteps_sv <- function(res, removeIdx, ssm =
         if(verbose) cat(sprintf("\rVB-EM-%d: L = %.8f \r", vbiter, ll[vbiter]))
       }
 
+
+      res$full.model <- SortClusters(res$full.model)
 
       res$label <- apply(res$full.model$responsibility, 1, which.max)
     }
@@ -1063,36 +1062,6 @@ RemoveClusterAndReassignVariantsWithEMsteps_sv <- function(res, removeIdx, ssm =
       res$full.model$Epi <- Epi/sum(Epi)
     }
 
-  } else {
-
-    res$ccfMean <- res$ccfMean[-removeIdx]
-    res$ccfCov <- res$ccfCov[-removeIdx]
-
-    logRho <- res$logResponsibility[, -removeIdx]
-
-    if (!is.matrix(logRho)) {
-      logRho <- as.matrix(logRho)
-    }
-
-    res$logResponsibility <-
-      if (length(label) ==length(res$ccfMean)) {
-        bsxfun.se("-", logRho, logsumexp(logRho, 1), expandByRow = F)	# 10.49
-      } else {
-        bsxfun.se("-", logRho, logsumexp(logRho, 1))	# 10.49
-      }
-    res$dirichletConcentration <- res$dirichletConcentration0 + colSums(res$responsibility)
-
-    if(!is.null(ssm)) {
-      res <- VarationalExpectationStep(bn = ssm$var_counts,
-                                       dn = ssm$ref_counts + ssm$var_counts,
-                                       cn = unique(ssm$normal_cn),
-                                       cr = ssm$major_cn + ssm$minor_cn,
-                                       epi = 1e-3,
-                                       purity = unique(ssm$purity),
-                                       model = res)
-      res$dirichletConcentration <- res$dirichletConcentration0 + colSums(res$responsibility)
-    }
-
   }
 
   res
@@ -1105,9 +1074,10 @@ RemoveClusterAndReassignVariantsWithEMsteps_sv <- function(res, removeIdx, ssm =
 #' @param ssm ccube data frame
 #' @param tol stopping condition in VBEM
 #' @param maxiter maximum iteration in VBEM
+#' @param epi sequencing error
 #' @return res ccube results list
 #' @export
-MergeClusters_sv <- function(res = res, ssm = ssm, tol = 1e-8, maxiter = 100) {
+MergeClusters_sv <- function(res = res, ssm = ssm, tol = 1e-8, maxiter = 100, epi = 1e-3) {
 
   res <- CullEmptyClusters(res = res, ssm = ssm)
 
@@ -1131,5 +1101,127 @@ MergeClusters_sv <- function(res = res, ssm = ssm, tol = 1e-8, maxiter = 100) {
   res$mergeCluster <- length(removeIdx)>0
   return(RemoveClusterAndReassignVariantsWithEMsteps_sv(res = res,
                                                      removeIdx = removeIdx, ssm = ssm,
-                                                     tol = tol, maxiter = maxiter))
+                                                     tol = tol, maxiter = maxiter, epi = epi))
+}
+
+#' Write files in PCAWG-11 formats, works for both CcubeCore and ccube_m6 output
+#' @param ssm data
+#' @param res Ccube result list
+#' @param resultFolder path to file
+#' @param sampleName sample name
+#' @return NULL
+#' @export
+WritePcawgFormats_sv <- function(ssm, res, resultFolder, sampleName,
+                              allFormats = F, basicFormats = T,
+                              outputMult = F, outputAssignProb = F, outputAssign = F,
+                              outputSubStruct = F, outputCcm = F, outputCcmIdx = F) {
+  if (basicFormats) {
+    outputMult <- T
+    outputAssign <- T
+    outputSubStruct <- T
+  }
+
+  if (allFormats) {
+    outputMult <- T
+    outputAssignProb <- T
+    outputAssign <- T
+    outputSubStruct <- T
+    outputCcm <- T
+    outputCcmIdx <- T
+  }
+
+  ## output calibration format
+  uniqLabels <- unique(res$label)
+  dir.create(resultFolder, recursive = T)
+
+  id <- do.call(rbind, strsplit(as.character(ssm$mutation_id), "_", fixed = T))
+
+  # Multiplicity
+  if (outputMult) {
+    mult <- data.frame(chr = id[,1], pos = id[,2])
+    mult$tumour_copynumber <- ssm$major_cn+ssm$minor_cn
+    mult$multiplicity <- ssm$ccube_mult
+    fn <- paste0(resultFolder, "/",
+                 sampleName, "_multiplicity.txt")
+    write.table(mult, file = fn, sep = "\t", row.names = F, quote = F)
+    shellCommand <- paste0("gzip -f ", fn)
+    system(shellCommand, intern = TRUE)
+    rm(mult)
+  }
+
+
+  # Assignment Prob
+  if(outputAssignProb){
+    mutAssign <- data.frame(chr = id[,1], pos = id[,2])
+
+    if (length(uniqLabels) == 1) {
+      mutR = data.frame(res$full.model$responsibility)
+      colnames(mutR) <- "cluster_1"
+    } else {
+      mutR <- data.frame(res$full.model$responsibility[, sort(uniqLabels)])
+      colnames(mutR) <- paste0("cluster_", seq_along(uniqLabels))
+    }
+
+    mutAssign <- data.frame(mutAssign, mutR)
+    fn <- paste0(resultFolder, "/",
+                 sampleName, "_assignment_probability_table.txt")
+    write.table(mutAssign, file = fn, sep = "\t", row.names = F, quote = F)
+    shellCommand <- paste0("gzip -f ", fn)
+    system(shellCommand, intern = TRUE)
+    rm(mutR, mutAssign)
+  }
+
+  # Assignment
+  if (outputAssign) {
+    mutAssign <- data.frame(chr = id[,1], pos = id[,2])
+    if (length(uniqLabels) == 1) {
+      mutAssign$cluster = 1
+    } else {
+      mutAssign$cluster <- res$label
+    }
+    fn <- paste0(resultFolder, "/",
+                 sampleName, "_mutation_assignments.txt")
+    write.table(mutAssign, file = fn, sep = "\t", row.names = F, quote = F)
+    shellCommand <- paste0("gzip -f ", fn)
+    system(shellCommand, intern = TRUE)
+    rm(mutAssign)
+  }
+
+  # subclonal structure
+  if (outputSubStruct) {
+    cellularity <- unique(ssm$purity)
+    clusterCertainty <- as.data.frame(table(res$label), stringsAsFactors = F)
+    clusterCertainty <- dplyr::rename(clusterCertainty, cluster = Var1, n_ssms = Freq)
+    clusterCertainty$proportion <- res$full.model$ccfMean[as.integer(clusterCertainty$cluster)] * cellularity
+    clusterCertainty$cluster <- seq_along(uniqLabels)
+    fn <- paste0(resultFolder, "/",
+                 sampleName, "_subclonal_structure.txt")
+    write.table(clusterCertainty, file = fn, sep = "\t", row.names = F, quote = F)
+    shellCommand <- paste0("gzip -f ", fn)
+    system(shellCommand, intern = TRUE)
+  }
+
+
+  # ccm
+  if (outputCcm) {
+    coClustMat <- Matrix::tcrossprod(res$full.model$responsibility)
+    diag(coClustMat) <- 1
+    fn = paste0(resultFolder, "/", sampleName, "_coassignment_probabilities.txt")
+    write.table(coClustMat, file = fn, sep = "\t", col.names = F, row.names = F, quote = F )
+    shellCommand <- paste0("gzip -f ", fn)
+    system(shellCommand, intern = TRUE)
+    rm(coClustMat)
+  }
+
+
+  # ccm index
+  if (outputCcmIdx) {
+    indexFile <- cbind(id[,1], id[, 2], seq_along(id[,1]))
+    colnames(indexFile) <- c("chr", "pos", "col")
+    fn = paste0(resultFolder, "/", sampleName, "_index.txt")
+    write.table(indexFile, file = fn, sep = "\t", row.names = F, quote = F )
+    shellCommand <- paste0("gzip -f ", fn)
+    system(shellCommand, intern = TRUE)
+  }
+
 }
