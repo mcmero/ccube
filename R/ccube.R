@@ -752,14 +752,16 @@ HasEmptyCluster <- function (res) {
 #' Remove empty clusters
 #' @param res Ccube result list
 #' @param ssm Ccub input data
+#' @param useEstep flag to use Estep for reassignment
+#' @param epi sequencing error
 #' @return Ccube result list
 #' @export
-CullEmptyClusters <- function(res, ssm, useEstep = T) {
+CullEmptyClusters <- function(res, ssm, useEstep = T, epi = 1e-3) {
 
   idx <- which(! seq_along(res$full.model$ccfMean) %in% unique(res$label) )
 
   if (useEstep) {
-    return(RemoveClusterAndReassignVariantsWithEstep(res = res, removeIdx = idx, ssm = ssm))
+    return(RemoveClusterAndReassignVariantsWithEstep(res = res, removeIdx = idx, ssm = ssm, epi = epi))
   } else {
     return(RemoveClusterAndReassignVariants(res = res, removeIdx = idx, ssm = ssm))
   }
@@ -768,15 +770,18 @@ CullEmptyClusters <- function(res, ssm, useEstep = T) {
 #' Remove small clusters
 #' @param res Ccube result list
 #' @param ssm Ccub input data
+#' @param th threshold for small clusters
+#' @param epi sequencing error
+#' @param useEstep use Estep for reassignment
 #' @return Ccube result list
 #' @export
-CullSmallClusters <- function(res, ssm, tol = 1e-2, useEstep = T) {
+CullSmallClusters <- function(res, ssm, th = 1e-2, epi = 1e-3, useEstep = T) {
 
   tt <- table(res$label)
-  idx <- which( tt/sum(tt) < tol )
+  idx <- which( tt/sum(tt) < th )
 
   if (useEstep) {
-    return(RemoveClusterAndReassignVariantsWithEstep(res = res, removeIdx = idx, ssm = ssm))
+    return(RemoveClusterAndReassignVariantsWithEstep(res = res, removeIdx = idx, ssm = ssm, epi = epi))
   } else {
     return(RemoveClusterAndReassignVariants(res = res, removeIdx = idx, ssm = ssm))
   }
@@ -784,7 +789,7 @@ CullSmallClusters <- function(res, ssm, tol = 1e-2, useEstep = T) {
 
 #' Remove a (or more) cluster and reassign its data if the cluster is nonempty
 #' @param res Ccube result list
-#' @param  removeIdx clusters to remove
+#' @param removeIdx clusters to remove
 #' @param ssm data
 #' @param label assigned labels if res doesn't have label variable
 #' @return Ccube result list
@@ -881,7 +886,7 @@ RemoveClusterAndReassignVariants <- function(res, removeIdx, ssm = NULL, label =
 
 #' Remove a (or more) cluster and reassign its data if the cluster is nonempty
 #' @param res Ccube result list
-#' @param  removeIdx clusters to remove
+#' @param removeIdx clusters to remove
 #' @param ssm data
 #' @param label assigned labels if res doesn't have label variable
 #' @param epi sequencing error
@@ -991,13 +996,15 @@ RemoveClusterAndReassignVariantsWithEstep <- function(res, removeIdx, ssm = NULL
 
 #' Remove a (or more) cluster and reassign its data if the cluster is nonempty
 #' @param res Ccube result list
-#' @param  removeIdx clusters to remove
+#' @param removeIdx clusters to remove
 #' @param ssm data
 #' @param label assigned labels if res doesn't have label variable
 #' @param tol stopping condition
 #' @param maxiter maximum iteration
 #' @param epi sequencing error
 #' @param verbose show progress
+#' @param fit_mult flag to estimate multiplicities
+#' @param fit_hyper flag to estimate hyperparameters
 #' @return Ccube result list
 #' @export
 RemoveClusterAndReassignVariantsWithEMsteps <- function(res, removeIdx, ssm = NULL, label = NULL, tol = 1e-8, maxiter = 100, epi = 1e-3, verbose = F,

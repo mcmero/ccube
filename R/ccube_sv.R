@@ -947,13 +947,15 @@ RemoveClusterAndReassignVariantsWithEstep_sv <- function(res, removeIdx, ssm = N
 
 #' Remove a (or more) cluster and reassign its data if the cluster is nonempty
 #' @param res Ccube result list
-#' @param  removeIdx clusters to remove
+#' @param removeIdx clusters to remove
 #' @param ssm data
 #' @param label assigned labels if res doesn't have label variable
 #' @param tol stopping condition
 #' @param maxiter maximum iteration
 #' @param epi sequencing error
 #' @param verbose show progress
+#' @param fit_mult flag to estimate multiplicities
+#' @param fit_hyper flag to estimate hyperparameters
 #' @return Ccube result list
 #' @export
 RemoveClusterAndReassignVariantsWithEMsteps_sv <- function(res, removeIdx, ssm = NULL, label = NULL, tol = 1e-8, maxiter = 100, epi = 1e-3, verbose = F,
