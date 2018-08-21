@@ -3,6 +3,8 @@ library(dplyr)
 library(ccube)
 library(doParallel)
 
+registerDoParallel(cores=3)
+
 set.seed(1234)
 
 numSv <- 100

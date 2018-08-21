@@ -749,14 +749,14 @@ CullEmptyClusters_sv <- function(res, ssm, useEstep = T, epi = 1e-3) {
 #' Remove small clusters
 #' @param res Ccube result list
 #' @param ssm Ccub input data
-#' @param tol threshold for small clusters
+#' @param th threshold for small clusters
 #' @param epi sequencing error
 #' @return Ccube result list
 #' @export
-CullSmallClusters_sv <- function(res, ssm, tol = 1e-2, epi = 1e-3,  useEstep = T) {
+CullSmallClusters_sv <- function(res, ssm, th = 1e-2, epi = 1e-3,  useEstep = T) {
 
   tt <- table(res$label)
-  idx <- which( tt/sum(tt) < tol )
+  idx <- which( tt/sum(tt) < th )
 
   if (useEstep) {
     return(RemoveClusterAndReassignVariantsWithEstep_sv(res = res, removeIdx = idx, ssm = ssm, epi = epi))

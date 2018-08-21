@@ -234,7 +234,7 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
     res <- func_qc1(res = res, ssm = ssm, epi = epi)
     passEmptyCluterTest <- T
     # remove small cluster
-    res <- func_qc2(res = res, ssm = ssm, tol = 1e-2, epi = epi)
+    res <- func_qc2(res = res, ssm = ssm, th = 1e-2, epi = epi)
     passSmallClusterTest <- T
 
     # Merge clusters
