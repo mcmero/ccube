@@ -613,20 +613,6 @@ VariationalLowerBound <- function(bn, dn, cn, cr, epi, purity, model) {
   L
 }
 
-# cull <- function(model) {
-#   ccfMean <- model$ccfMean
-#   ccfCov <- model$ccfCov
-#   Epi <- model$Epi
-#   k <- ncol(model$ccfMean)
-#   kl <- rep(NA, k)
-#   for (i in 1:k-1) {
-#     kl[i] <- monomvn::kl.norm(mu1=ccfMean[,i], S1 = ccfCov[,i], mu2 = ccfMean[,i+1], S2 = ccfCov[,i+1])
-#   }
-#   tol <- 10
-#   cullCluster <- kl < tol
-# }
-
-
 #' Estimate purity
 #' @param mydata ccube data
 #' @param wgd whole genome duplication status
