@@ -1,13 +1,15 @@
 rm(list = ls())
 library(dplyr)
 library(ccube)
-
+library(doParallel)
 
 set.seed(1234)
 
 numSv <- 100
 maxiter <- 200
 init =5  # number of clusters
+numOfClusterPool = 1:6
+numOfRepeat = 5
 baseDepth = 40
 ccfSet <- c(1, 0.3, 0.7) # true ccf pool
 ccfTrue <- sample(ccfSet, numSv, c(0.5,0.3,0.2), replace = T)
@@ -71,36 +73,94 @@ mydata <- mutate(rowwise(mydata),
 
 
 # SV prototype
-res <- CcubeSVCore(mydata = mydata, init = init, fit_mult = T, use = "use_base", verbose = T)
+doubleBreakPtsRes <- RunCcubePipeline(dataFolder = "~/Dropbox/for_marek/", sampleName = "sv-test-sample",
+                                      ssm = mydata, modelSV = T,
+                                      numOfClusterPool = numOfClusterPool, numOfRepeat = numOfRepeat,
+                                      runAnalysis = T, runQC = T,
+                                      ccubeResultRDataFile = "~/Dropbox/for_marek/ccube_sv_results.RData", multiCore = T,
+                                      basicFormats = F, allFormats = F, returnAll = T)
 
-label = res$label
+fn1 = "~/Desktop/double_break_points_results.pdf"
+MakeCcubeStdPlot_sv(res = doubleBreakPtsRes$res, ssm = doubleBreakPtsRes$ssm, printPlot = T, fn = fn1)
 
-mydata$ccube_mult1 <- res$full.model$bv1
-mydata$ccube_mult2 <- res$full.model$bv2
+# Run ccube seperately
+
+mydata1 = mydata[, c("mutation_id", "var_counts1", "ref_counts1", "major_cn1", "minor_cn1", "purity", "normal_cn")]
+mydata1 = dplyr::rename(mydata1, var_counts = var_counts1, ref_counts = ref_counts1,
+                        major_cn = major_cn1, minor_cn = minor_cn1)
+
+breakPt1Res <- RunCcubePipeline(dataFolder = "~/Dropbox/for_marek/", sampleName = "sv-test-sample",
+                                      ssm = mydata1,
+                                      numOfClusterPool = numOfClusterPool, numOfRepeat = numOfRepeat,
+                                      runAnalysis = T, runQC = T, multiCore = T,
+                                      basicFormats = F, allFormats = F, returnAll = T)
+
+
+fn2 = "~/Desktop/ccube_1st_breakpoint.pdf"
+MakeCcubeStdPlot(ssm = breakPt1Res$ssm, res = breakPt1Res$res, printPlot = T, fn = fn2)
+
+mydata2= mydata[, c("mutation_id", "var_counts2", "ref_counts2", "major_cn2", "minor_cn2", "purity", "normal_cn")]
+mydata2 = dplyr::rename(mydata2, var_counts = var_counts2, ref_counts = ref_counts2, major_cn = major_cn2, minor_cn = minor_cn2)
+
+breakPt2Res <- RunCcubePipeline(dataFolder = "~/Dropbox/for_marek/", sampleName = "sv-test-sample",
+                                ssm = mydata2,
+                                numOfClusterPool = numOfClusterPool, numOfRepeat = numOfRepeat,
+                                runAnalysis = T, runQC = T, multiCore = T,
+                                basicFormats = F, allFormats = F, returnAll = T)
+
+fn3 = "~/Desktop/ccube_2nd_breakpoint.pdf"
+MakeCcubeStdPlot(ssm = breakPt2Res$ssm, res = breakPt2Res$res, printPlot = T, fn = fn3)
+
+# compare event ccf
+
+label1 = doubleBreakPtsRes$res$label
+label2 = breakPt1Res$res$label
+label3 = breakPt2Res$res$label
+
+mydata$ccube_double_mult1 = doubleBreakPtsRes$res$full.model$bv1
+mydata$ccube_double_mult2 = doubleBreakPtsRes$res$full.model$bv2
+
+mydata$ccube_single_mult1 = breakPt1Res$res$full.model$bv
+mydata$ccube_single_mult2 = breakPt2Res$res$full.model$bv
+
 mydata <- mutate(rowwise(mydata),
-                  vaf1 = var_counts1/(var_counts1+ref_counts1),
-                  ccube_ccf1 = MapVaf2CcfPyClone(vaf1,
-                                            purity,
-                                            normal_cn,
-                                            major_cn1 + minor_cn1,
-                                            major_cn1 + minor_cn1,
-                                            ccube_mult1,
-                                            constraint=F),
-                  true_obs_ccf1 = MapVaf2CcfPyClone(vaf1,
-                                                  purity,
-                                                  normal_cn,
-                                                  major_cn1 + minor_cn1,
-                                                  major_cn1 + minor_cn1,
-                                                  mult1,
-                                                  constraint=F),
+                 vaf1 = var_counts1/(var_counts1+ref_counts1),
+                 ccube_double_ccf1 = MapVaf2CcfPyClone(vaf1,
+                                                purity,
+                                                normal_cn,
+                                                major_cn1 + minor_cn1,
+                                                major_cn1 + minor_cn1,
+                                                ccube_double_mult1,
+                                                constraint=F),
+                 ccube_single_ccf1 = MapVaf2CcfPyClone(vaf1,
+                                                       purity,
+                                                       normal_cn,
+                                                       major_cn1 + minor_cn1,
+                                                       major_cn1 + minor_cn1,
+                                                       ccube_single_mult1,
+                                                       constraint=F),
+                 true_obs_ccf1 = MapVaf2CcfPyClone(vaf1,
+                                                   purity,
+                                                   normal_cn,
+                                                   major_cn1 + minor_cn1,
+                                                   major_cn1 + minor_cn1,
+                                                   mult1,
+                                                   constraint=F),
                  vaf2 = var_counts2/(var_counts2+ref_counts2),
-                 ccube_ccf2 = MapVaf2CcfPyClone(vaf2,
+                 ccube_double_ccf2 = MapVaf2CcfPyClone(vaf2,
                                                 purity,
                                                 normal_cn,
                                                 major_cn2 + minor_cn2,
                                                 major_cn2 + minor_cn2,
-                                                ccube_mult2,
+                                                ccube_double_mult2,
                                                 constraint=F),
+                 ccube_single_ccf2 = MapVaf2CcfPyClone(vaf2,
+                                                       purity,
+                                                       normal_cn,
+                                                       major_cn2 + minor_cn2,
+                                                       major_cn2 + minor_cn2,
+                                                       ccube_single_mult2,
+                                                       constraint=F),
                  true_obs_ccf2 = MapVaf2CcfPyClone(vaf2,
                                                    purity,
                                                    normal_cn,
@@ -108,75 +168,58 @@ mydata <- mutate(rowwise(mydata),
                                                    major_cn2 + minor_cn2,
                                                    mult2,
                                                    constraint=F)
-                 )
-myColors=gg_color_hue(10)
-
-fn1 = "~/Desktop/double_break_points_results.pdf"
-pdf(fn1, width=8, height=8)
-
-par(mfrow=c(2,2))
-plot(mydata$true_obs_ccf1, mydata$ccube_ccf1, col = myColors[label],
-     xlim = c(0, max( c(mydata$true_obs_ccf1, mydata$ccube_ccf1) ) ),
-     ylim = c(0, max( c(mydata$true_obs_ccf1, mydata$ccube_ccf1) ) ),
-     xlab = "true ccf", ylab = "estimated ccf", main = "1st break point")
-points( seq(0, max( c(mydata$true_obs_ccf1, mydata$ccube_ccf1) ), length.out = 100 ),
-          seq(0, max( c(mydata$true_obs_ccf1, mydata$ccube_ccf1) ), length.out = 100 ),
-        type = "l" )
-
-plot(mydata$true_obs_ccf2, mydata$ccube_ccf2, col = myColors[label],
-     xlim = c(0, max( c(mydata$true_obs_ccf2, mydata$ccube_ccf2) ) ),
-     ylim = c(0, max( c(mydata$true_obs_ccf2, mydata$ccube_ccf2) ) ),
-     xlab = "true ccf", ylab = "estimated ccf", main = "2nd break point"
 )
 
-points( seq(0, max( c(mydata$true_obs_ccf2, mydata$ccube_ccf2) ), length.out = 100 ),
-        seq(0, max( c(mydata$true_obs_ccf2, mydata$ccube_ccf2) ), length.out = 100 ),
+
+
+
+
+myColors=gg_color_hue(10)
+
+fn = "~/Desktop/event_ccf_comparsions.pdf"
+pdf(fn, width=8, height=8)
+
+par(mfrow=c(2,2))
+plot(mydata$true_obs_ccf1, mydata$ccube_double_ccf1, col = myColors[label1],
+     xlim = c(0, max( c(mydata$true_obs_ccf1, mydata$ccube_double_ccf1) ) ),
+     ylim = c(0, max( c(mydata$true_obs_ccf1, mydata$ccube_double_ccf1) ) ),
+     xlab = "true ccf", ylab = "estimated ccf", main = "double model: 1st break point")
+points( seq(0, max( c(mydata$true_obs_ccf1, mydata$ccube_double_ccf1) ), length.out = 100 ),
+        seq(0, max( c(mydata$true_obs_ccf1, mydata$ccube_double_ccf1) ), length.out = 100 ),
         type = "l" )
 
-tableSv <- table(label)
-uniqLabels = unique(label)
-names(tableSv) <- as.character(format(round(res$full.model$ccfMean[sort(uniqLabels)], 2), nsmall = 2))
-barplot(tableSv, las = 2, col = myColors[sort(uniqLabels)],
-        xlab = "cluster mean", ylab="number of variants",
-        main = "cluster prevalence")
+plot(mydata$true_obs_ccf2, mydata$ccube_double_ccf2, col = myColors[label1],
+     xlim = c(0, max( c(mydata$true_obs_ccf2, mydata$ccube_double_ccf2) ) ),
+     ylim = c(0, max( c(mydata$true_obs_ccf2, mydata$ccube_double_ccf2) ) ),
+     xlab = "true ccf", ylab = "estimated ccf", main = "double model: 2nd break point"
+)
 
-plot(res$L, col = myColors[5], type = "p", ylab = "ELBO", xlab = "iteration")
+points( seq(0, max( c(mydata$true_obs_ccf2, mydata$ccube_double_ccf2) ), length.out = 100 ),
+        seq(0, max( c(mydata$true_obs_ccf2, mydata$ccube_double_ccf2) ), length.out = 100 ),
+        type = "l" )
+
+plot(mydata$true_obs_ccf1, mydata$ccube_single_ccf1, col = myColors[label2],
+     xlim = c(0, max( c(mydata$true_obs_ccf1, mydata$ccube_single_ccf1) ) ),
+     ylim = c(0, max( c(mydata$true_obs_ccf1, mydata$ccube_single_ccf1) ) ),
+     xlab = "true ccf", ylab = "estimated ccf", main = "single model: 1st break point")
+points( seq(0, max( c(mydata$true_obs_ccf1, mydata$ccube_single_ccf1) ), length.out = 100 ),
+        seq(0, max( c(mydata$true_obs_ccf1, mydata$ccube_single_ccf1) ), length.out = 100 ),
+        type = "l" )
+
+plot(mydata$true_obs_ccf2, mydata$ccube_single_ccf2, col = myColors[label3],
+     xlim = c(0, max( c(mydata$true_obs_ccf2, mydata$ccube_single_ccf2) ) ),
+     ylim = c(0, max( c(mydata$true_obs_ccf2, mydata$ccube_single_ccf2) ) ),
+     xlab = "true ccf", ylab = "estimated ccf", main = "single model: 2nd break point"
+)
+
+points( seq(0, max( c(mydata$true_obs_ccf2, mydata$ccube_single_ccf2) ), length.out = 100 ),
+        seq(0, max( c(mydata$true_obs_ccf2, mydata$ccube_single_ccf2) ), length.out = 100 ),
+        type = "l" )
 
 dev.off()
 
-# Run ccube seperately
 
-mydata1 = mydata[, c("mutation_id", "var_counts1", "ref_counts1", "major_cn1", "minor_cn1", "purity", "normal_cn")]
-mydata1 = dplyr::rename(mydata1, var_counts = var_counts1, ref_counts = ref_counts1, major_cn = major_cn1, minor_cn = minor_cn1)
-res1 <- CcubeCore(mydata = mydata1, init = 5, fit_mult = T, use = "use_one", verbose = T)
-mydata1$ccube_ccf_mean <- res1$full.model$ccfMean[res1$label]
-mydata1$ccube_mult <- res1$full.model$bv
-mydata1 <- mutate(rowwise(mydata1),
-              vaf = var_counts/(var_counts+ref_counts),
-              ccube_ccf = MapVaf2CcfPyClone(vaf,
-                                            purity,
-                                            normal_cn,
-                                            major_cn + minor_cn,
-                                            major_cn + minor_cn,
-                                            ccube_mult,
-                                            constraint=F) )
 
-fn2 = "~/Desktop/ccube_1st_breakpoint.pdf"
-MakeCcubeStdPlot(mydata1, res1, printPlot = T, fn = fn2)
 
-mydata2= mydata[, c("mutation_id", "var_counts2", "ref_counts2", "major_cn2", "minor_cn2", "purity", "normal_cn")]
-mydata2 = dplyr::rename(mydata2, var_counts = var_counts2, ref_counts = ref_counts2, major_cn = major_cn2, minor_cn = minor_cn2)
-res2 <- CcubeCore(mydata = mydata2, init = 5, fit_mult = T, use = "use_one", verbose = T)
-mydata2$ccube_ccf_mean <- res2$full.model$ccfMean[res2$label]
-mydata2$ccube_mult <- res2$full.model$bv
-mydata2 <- mutate(rowwise(mydata2),
-                  vaf = var_counts/(var_counts+ref_counts),
-                  ccube_ccf = MapVaf2CcfPyClone(vaf,
-                                                purity,
-                                                normal_cn,
-                                                major_cn + minor_cn,
-                                                major_cn + minor_cn,
-                                                ccube_mult,
-                                                constraint=F) )
-fn3 = "~/Desktop/ccube_2nd_breakpoint.pdf"
-MakeCcubeStdPlot(mydata2, res2, printPlot = T, fn = fn3)
+
+
