@@ -299,7 +299,7 @@ GetCcf <- function(mydata, use = c("use_base", "use_one")) {
 
     if (nrow(dd) > 0) {
       dd <- dplyr::mutate(dplyr::rowwise(dd), ccf = min(c(ccf1, ccf2, ccf3), na.rm = T ))
-      mydata[mydata$id %in% dd$id,]$ccf = dd$ccf
+      mydata[mydata$mutation_id %in% dd$mutation_id,]$ccf = dd$ccf
     }
 
     mydata <- dplyr::mutate(dplyr::rowwise(mydata),
@@ -317,8 +317,8 @@ GetCcf <- function(mydata, use = c("use_base", "use_one")) {
                                                    1, constraint = F))
 
 
-      mydata[mydata$id %in% dd1$id,]$ccf = dd1$ccf
-      mydata[mydata$id %in% dd1$id,]$mult = 1
+      mydata[mydata$mutation_id %in% dd1$mutation_id,]$ccf = dd1$ccf
+      mydata[mydata$mutation_id %in% dd1$mutation_id,]$mult = 1
     }
   }
 
@@ -440,7 +440,7 @@ VariationalMaximimizationStep <- function(bn, dn, cn, cr, major_cn, epi, purity,
         term1 <- sum(responsibility[ii, ] * bn[ii] * (log (aa * ccfMean +bb) - aa2*ccfCov/(2 * (aa * ccfMean +bb)^2 ) ))
         term2 <- sum(responsibility[ii, ] * (dn[ii] - bn[ii]) * (log (1 - aa * ccfMean - bb) - aa2*ccfCov/(2 * (1 - aa * ccfMean -bb)^2)  ))
         term3 <- sum( responsibility[ii, ]*  logChoose(dn[ii], bn[ii]) )
-        qq[jj] <- term1 + term2
+        qq[jj] <- term1 + term2 + term3
       }
       bv[ii] <- bvPool[which.max(qq)]
 
@@ -594,8 +594,8 @@ VariationalLowerBound <- function(bn, dn, cn, cr, epi, purity, model) {
   for(i in 1:k) {
 
     Epbk[,i] <- sum(R[,i]*(bn * (log (aa * ccfMean[i] +bb) - aa2*ccfCov[,i]/(2 * (aa * ccfMean[i] +bb)^2 ) ) +
-      (dn - bn) * (log (1 - aa * ccfMean[i] - bb) - aa2*ccfCov[,i]/(2 * (1 - aa * ccfMean[i] -bb)^2))))
-      #sum( R[,i]*logChoose(dn, bn) )
+      (dn - bn) * (log (1 - aa * ccfMean[i] - bb) - aa2*ccfCov[,i]/(2 * (1 - aa * ccfMean[i] -bb)^2)))) +
+      sum( R[,i]*logChoose(dn, bn) )
     q <- solve(t(U0), m[,i,drop=F]-m0)
     mm0Wmm0[i] <- pracma::dot(q, q)
     U <- chol(M[,i])
@@ -898,9 +898,10 @@ RemoveClusterAndReassignVariants <- function(res, removeIdx, ssm = NULL, label =
 #' @param  removeIdx clusters to remove
 #' @param ssm data
 #' @param label assigned labels if res doesn't have label variable
+#' @param epi sequencing error
 #' @return Ccube result list
 #' @export
-RemoveClusterAndReassignVariantsWithEstep <- function(res, removeIdx, ssm = NULL, label = NULL) {
+RemoveClusterAndReassignVariantsWithEstep <- function(res, removeIdx, ssm = NULL, label = NULL, epi = 1e-3) {
 
   if (length(removeIdx) == 0) {
     return(res)
@@ -942,9 +943,12 @@ RemoveClusterAndReassignVariantsWithEstep <- function(res, removeIdx, ssm = NULL
                                        dn = ssm$ref_counts + ssm$var_counts,
                                        cn = ssm$normal_cn,
                                        cr = ssm$major_cn + ssm$minor_cn,
-                                       epi = 1e-3,
+                                       epi = epi,
                                        purity = unique(ssm$purity),
                                        model = res$full.model)
+
+      res$full.model <- SortClusters(res$full.model)
+
       res$label <- apply(res$full.model$responsibility, 1, which.max)
       res$full.model$dirichletConcentration <- res$full.model$dirichletConcentration0 + colSums(res$full.model$responsibility)
     }
@@ -1006,10 +1010,11 @@ RemoveClusterAndReassignVariantsWithEstep <- function(res, removeIdx, ssm = NULL
 #' @param label assigned labels if res doesn't have label variable
 #' @param tol stopping condition
 #' @param maxiter maximum iteration
+#' @param epi sequencing error
 #' @param verbose show progress
 #' @return Ccube result list
 #' @export
-RemoveClusterAndReassignVariantsWithEMsteps <- function(res, removeIdx, ssm = NULL, label = NULL, tol = 1e-8, maxiter = 100, verbose = F,
+RemoveClusterAndReassignVariantsWithEMsteps <- function(res, removeIdx, ssm = NULL, label = NULL, tol = 1e-8, maxiter = 100, epi = 1e-3, verbose = F,
                                                         fit_mult = T, fit_hyper = T) {
 
   if (length(removeIdx) == 0) {
@@ -1060,7 +1065,7 @@ RemoveClusterAndReassignVariantsWithEMsteps <- function(res, removeIdx, ssm = NU
                                                     dn = ssm$ref_counts + ssm$var_counts,
                                                     cn = ssm$normal_cn,
                                                     cr = ssm$major_cn + ssm$minor_cn,
-                                                    epi = 1e-3,
+                                                    epi = epi,
                                                     purity = unique(ssm$purity),
                                                     model = res$full.model)
 
@@ -1069,7 +1074,7 @@ RemoveClusterAndReassignVariantsWithEMsteps <- function(res, removeIdx, ssm = NU
                                                         cn = ssm$normal_cn,
                                                         cr = ssm$major_cn + ssm$minor_cn,
                                                         major_cn = ssm$major_cn,
-                                                        epi = 1e-3,
+                                                        epi = epi,
                                                         purity = unique(ssm$purity),
                                                         model = res$full.model,fit_mult = fit_mult,
                                                         fit_hyper = fit_hyper)
@@ -1078,7 +1083,7 @@ RemoveClusterAndReassignVariantsWithEMsteps <- function(res, removeIdx, ssm = NU
                                    dn = ssm$ref_counts + ssm$var_counts,
                                    cn = ssm$normal_cn,
                                    cr = ssm$major_cn + ssm$minor_cn,
-                                   epi = 1e-3,
+                                   epi = epi,
                                    purity = unique(ssm$purity),
                                    model = res$full.model)/length(res$label)
 
@@ -1087,7 +1092,7 @@ RemoveClusterAndReassignVariantsWithEMsteps <- function(res, removeIdx, ssm = NU
         if(verbose) cat(sprintf("\rVB-EM-%d: L = %.8f \r", vbiter, ll[vbiter]))
       }
 
-
+      res$full.model <- SortClusters(res$full.model)
       res$label <- apply(res$full.model$responsibility, 1, which.max)
     }
 
@@ -1148,9 +1153,10 @@ RemoveClusterAndReassignVariantsWithEMsteps <- function(res, removeIdx, ssm = NU
 #' @param ssm ccube data frame
 #' @param tol stopping condition in VBEM
 #' @param maxiter maximum iteration in VBEM
+#' @param epi sequencing error
 #' @return res ccube results list
 #' @export
-MergeClusters <- function(res = res, ssm = ssm, tol = 1e-8, maxiter = 100) {
+MergeClusters <- function(res = res, ssm = ssm, tol = 1e-8, maxiter = 100, epi = 1e-3) {
 
   res <- CullEmptyClusters(res = res, ssm = ssm)
 
@@ -1174,7 +1180,7 @@ MergeClusters <- function(res = res, ssm = ssm, tol = 1e-8, maxiter = 100) {
   res$mergeCluster <- length(removeIdx)>0
   return(RemoveClusterAndReassignVariantsWithEMsteps(res = res,
                                                      removeIdx = removeIdx, ssm = ssm,
-                                                     tol = tol, maxiter = maxiter))
+                                                     tol = tol, maxiter = maxiter, epi = epi))
 }
 
 
@@ -1300,281 +1306,4 @@ WritePcawgFormats <- function(ssm, res, resultFolder, sampleName,
 
 }
 
-#' Run Ccube analysis
-#' @param sampleName sample name
-#' @param dataFolder path to data folder that stores tmp result files
-#' @param resultFolder path to output formats files
-#' @param runParser run parser
-#' @param runAnalysis run analysis
-#' @param runQC run QC
-#' @param runAnalysisSnap run a lite version of the main analysis
-#' @param vcfFile path to vcf file
-#' @param copyNumberFile path to copy number file
-#' @param purity estimated purity of the sample
-#' @param numOfClusterPool candidates of number of clusters
-#' @param numOfRepeat number of repeat runs for each candidate number of clusters
-#' @param epi sequencing error
-#' @param tol convergence thershold
-#' @param maxiter maximum iteration
-#' @param multiCore use multiple cores for repeated runs
-#' @param ccubeInputRDataFile path to Ccube input Rdata
-#' @param ccubeResultRDataFile path to Ccube result Rdata
-#' @return NULL
-#' @export
-RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder = NULL,
-                             runParser = F, variantCaller = NULL, cnaCaller = NULL,
-                             runAnalysis = F, runQC = F, runAnalysisSnap = F, runPcawgMergeQc =F,
-                             writeOutput = F,
-                             allFormats = F, basicFormats = T,
-                             vcfFile = NULL, copyNumberFile = NULL, purity = NA,
-                             numOfClusterPool = NULL, numOfRepeat = NULL,
-                             epi = 1e-3, tol = 1e-8, maxiter = 1e3,
-                             multiCore = F, ccubeInputRDataFile = NULL,
-                             ccubeResultRDataFile = NULL,
-                             maxSnv = 5e4){
 
-  # stopifnot( runParser | runAnalysis | runAnalysisSnap,
-  #            runParser & !is.null(variantCaller) & !is.null(cnaCaller),
-  #            ! runParser & !is.null(ccubeInputRDataFile)
-  #            )
-
-
-  if (is.null(sampleName) ) {
-    sampleName <- "sample1"
-  }
-
-  if (is.null(dataFolder) ) {
-    dataFolder <- "ccube_data/sample1/"
-  }
-
-  if (is.null(resultFolder) ) {
-    resultFolder <- "ccube_res/sample1/"
-  }
-
-  if (!dir.exists(dataFolder)) {
-    dir.create(dataFolder, recursive = T)
-  }
-
-  if (!dir.exists(resultFolder)) {
-    dir.create(resultFolder, recursive = T)
-  }
-
-
-  if (runParser) {
-
-    shellCommandConsensus <- paste(
-      "python create_ccfclust_inputs_consensus_bb.py -v ", variantCaller,
-      " --output-variants ", paste0(dataFolder, "/ssm_data.txt"),
-      " ", vcfFile, sep = ""
-    )
-
-    cat(shellCommandConsensus, "\n")
-    system(shellCommandConsensus, intern = TRUE)
-
-    ssm <- read.delim(paste0(dataFolder, "/ssm_data.txt"),
-                      stringsAsFactors = F)
-
-    cna <- read.delim(batternbergFile, stringsAsFactors = F)
-
-    if (cnaCaller == "pcawg11_std") {
-      ssm = ParseSnvCnaPcawg11Format(ssm, cna)
-    } else {
-      ssm = ParseSnvCnaConsensus(ssm, cna)
-    }
-
-
-    ssm <- dplyr::filter(ssm, major_cn > 0)
-
-    sampleSummary <- data.frame(samplename = sampleName,
-                                overlap_cna = nrow(ssm),
-                                overlap_cna_balance_1_1 = nrow(filter(ssm, major_cn == 1 & minor_cn ==1) ),
-                                overlap_cna_balance_2_2 = nrow(filter(ssm, major_cn == 2 & minor_cn ==2) ),
-                                overlap_cna_balance = nrow(filter(ssm, major_cn == minor_cn  ) ),
-                                overlap_clonal_cna = nrow(filter(ssm, cn_frac == 1  ) ),
-                                overlap_subclonal_cna = nrow(filter(ssm, cn_frac != 1  ) )
-    )
-
-    write.table(sampleSummary, file = paste0(dataFolder, '/', sampleName, '_pre_clustering_summary.txt'),
-                sep = '\t', row.names = F, quote = F)
-
-    if (nrow(ssm)>0) {
-      if (nrow(ssm) > maxSnv) {
-        ssm <- dplyr::sample_n(ssm, maxSnv)
-      }
-      ssm$normal_cn = 2
-      ssm <- dplyr::rename(ssm, ref_counts=a, total_counts=d)
-      ssm <- dplyr::mutate(ssm, var_counts=total_counts-ref_counts, mutation_id = gene)
-      ssm$ccube_purity <- GetPurity(ssm)
-      ssm$purity <- purity
-
-      write.table(unique(ssm$ccube_purity), file = paste0(dataFolder,"/ccube_purity.txt"),
-                  row.names = F, col.names=F, quote =F )
-      save(ssm, file = paste0(dataFolder, "/ssm_no_chrxy.RData"))
-    }
-    save(ssm, file = ccubeInputRDataFile)
-  }
-
-  if (runAnalysis) {
-
-    if (!is.null(ccubeInputRDataFile) ) {
-      if (file.exists(ccubeInputRDataFile)) {
-        load(ccubeInputRDataFile)
-      }
-    }
-
-    # filtering
-    ssm <- dplyr::filter(ssm, major_cn > 0)
-
-    if (runAnalysisSnap) {
-      iterSetting <- max(numOfClusterPool)
-    } else {
-      iterSetting <- sort(rep(numOfClusterPool, numOfRepeat))
-    }
-
-
-    if (multiCore) {
-      results <- foreach(n = seq_along(iterSetting), .combine = c, .packages = "ccube") %dopar%
-      {
-        k <- iterSetting[n]
-        list(CcubeCore(mydata = ssm, epi=epi,
-                      init=k, tol = tol, maxiter = maxiter,
-                      fit_mult = T, fit_hyper = T, use = "use_base", verbose = F))
-      }
-
-    }else {
-      results <- foreach(n = seq_along(iterSetting), .combine = c, .packages = "ccube") %do%
-      {
-        k <- iterSetting[n]
-        list(CcubeCore(mydata = ssm, epi=epi,
-                      init=k, tol = tol, maxiter = maxiter,
-                      fit_mult = T, fit_hyper = T, use = "use_base", verbose = F))
-      }
-    }
-
-    lb <- unlist(Map( function(x) max(x$L), results))
-    sortedIdx <- sort(lb, decreasing = T, index.return = T)$ix
-    res <- results[[sortedIdx[1]]]
-
-  }
-
-  if (runQC) {
-
-    if (!is.null(ccubeResultRDataFile) ) {
-      if (file.exists(ccubeResultRDataFile)) {
-        load(ccubeResultRDataFile)
-        sortedIdx <- sort(lb, decreasing = T, index.return = T)$ix
-      }
-    }
-    # Check for clonal cluster
-    foundDiffRes <- F
-    if (! HasClonalCluster(res) ) {
-      for (ii in sortedIdx) {
-        rr <- results[[ii]]
-        if (HasClonalCluster(rr)) {
-          foundDiffRes <- T
-          break
-        }
-        passClonalCluterTest <- F
-      }
-    } else {
-      passClonalCluterTest <- T
-    }
-
-    if (foundDiffRes) {
-      res <- rr
-      passClonalCluterTest <- T
-    }
-
-    # remove empty cluster
-    res <- CullEmptyClusters(res = res, ssm = ssm)
-    passEmptyCluterTest <- T
-    # remove small cluster
-    res <- CullSmallClusters(res = res, ssm = ssm, tol = 1e-2)
-    passSmallClusterTest <- T
-
-    # Merge clusters
-    res <- MergeClusters(res, ssm)
-    passMergeClusterTest <- T
-
-    res$qc <- list(passClonalCluterTest = passClonalCluterTest,
-                   passEmptyCluterTest = passEmptyCluterTest,
-                   passSmallClusterTest = passSmallClusterTest,
-                   passMergeClusterTest = passMergeClusterTest)
-  }
-
-
-  # make outputs
-  if ( (runAnalysis | runAnalysisSnap | runQC) & writeOutput ) {
-    ssm$ccube_ccf_mean <- res$full.model$ccfMean[res$label]
-    ssm$ccube_mult <- res$full.model$bv
-    ssm <- mutate(rowwise(ssm),
-                  vaf = var_counts/(var_counts+ref_counts),
-                  ccube_ccf = MapVaf2CcfPyClone(vaf,
-                                                purity,
-                                                normal_cn,
-                                                major_cn + minor_cn,
-                                                major_cn + minor_cn,
-                                                ccube_mult,
-                                                constraint=F) )
-
-    # write Ccube results Rdata
-    if (! is.null(ccubeResultRDataFile) ) {
-      fn <-  ccubeResultRDataFile
-    } else {
-      fn <- paste0(dataFolder,
-                   "/ccube_res.RData")
-    }
-
-    save(ssm, results, res, lb, file = fn)
-    WritePcawgFormats(ssm = ssm, res = res, resultFolder = resultFolder,
-                      sampleName = sampleName, allFormats = allFormats,
-                      basicFormats = basicFormats)
-    # summary graph
-    fn <- paste0(resultFolder, "/", sampleName, "_results_summary.pdf")
-    MakeCcubeStdPlot(ssm = ssm, res = res, printPlot = T, fn = fn)
-
-  }
-
-  if (runPcawgMergeQc) {
-
-    if (!is.null(ccubeResultRDataFile) ) {
-      if (file.exists(ccubeResultRDataFile)) {
-        load(ccubeResultRDataFile)
-      }
-    }
-
-    res = MergeClusters(res = res, ssm = ssm)
-
-    if (res$mergeCluster) {
-      ssm$ccube_ccf_mean <- res$full.model$ccfMean[res$label]
-      ssm$ccube_mult <- res$full.model$bv
-      ssm <- mutate(rowwise(ssm),
-                    vaf = var_counts/(var_counts+ref_counts),
-                    ccube_ccf = MapVaf2CcfPyClone(vaf,
-                                                  purity,
-                                                  normal_cn,
-                                                  major_cn + minor_cn,
-                                                  major_cn + minor_cn,
-                                                  ccube_mult,
-                                                  constraint=F) )
-
-      # write Ccube results Rdata
-      if (! is.null(ccubeResultRDataFile) ) {
-        fn <-  ccubeResultRDataFile
-      } else {
-        fn <- paste0(dataFolder,
-                     "/ccube_res.RData")
-      }
-
-      save(ssm, results, res, lb, file = fn)
-      WritePcawgFormats(ssm = ssm, res = res, resultFolder = resultFolder,
-                        sampleName = sampleName, allFormats = allFormats,
-                        basicFormats = basicFormats)
-      # summary graph
-      fn <- paste0(resultFolder, "/", sampleName, "_results_summary.pdf")
-      MakeCcubeStdPlot(ssm = ssm, res = res, printPlot = T, fn = fn)
-    }
-
-  }
-
-}
