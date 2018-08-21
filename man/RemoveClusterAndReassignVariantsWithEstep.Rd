@@ -5,7 +5,7 @@
 \title{Remove a (or more) cluster and reassign its data if the cluster is nonempty}
 \usage{
 RemoveClusterAndReassignVariantsWithEstep(res, removeIdx, ssm = NULL,
-  label = NULL)
+  label = NULL, epi = 0.001)
 }
 \arguments{
 \item{res}{Ccube result list}
@@ -15,6 +15,8 @@ RemoveClusterAndReassignVariantsWithEstep(res, removeIdx, ssm = NULL,
 \item{ssm}{data}
 
 \item{label}{assigned labels if res doesn't have label variable}
+
+\item{epi}{sequencing error}
 }
 \value{
 Ccube result list

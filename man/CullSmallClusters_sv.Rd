@@ -4,12 +4,16 @@
 \alias{CullSmallClusters_sv}
 \title{Remove small clusters}
 \usage{
-CullSmallClusters_sv(res, ssm, tol = 0.01, useEstep = T)
+CullSmallClusters_sv(res, ssm, tol = 0.01, epi = 0.001, useEstep = T)
 }
 \arguments{
 \item{res}{Ccube result list}
 
 \item{ssm}{Ccub input data}
+
+\item{tol}{threshold for small clusters}
+
+\item{epi}{sequencing error}
 }
 \value{
 Ccube result list

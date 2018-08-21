@@ -4,7 +4,8 @@
 \alias{MergeClusters}
 \title{Merge clusters}
 \usage{
-MergeClusters(res = res, ssm = ssm, tol = 1e-08, maxiter = 100)
+MergeClusters(res = res, ssm = ssm, tol = 1e-08, maxiter = 100,
+  epi = 0.001)
 }
 \arguments{
 \item{res}{ccube results list}
@@ -14,6 +15,8 @@ MergeClusters(res = res, ssm = ssm, tol = 1e-08, maxiter = 100)
 \item{tol}{stopping condition in VBEM}
 
 \item{maxiter}{maximum iteration in VBEM}
+
+\item{epi}{sequencing error}
 }
 \value{
 res ccube results list

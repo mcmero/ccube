@@ -6,7 +6,7 @@
 \usage{
 RemoveClusterAndReassignVariantsWithEMsteps_sv(res, removeIdx,
   ssm = NULL, label = NULL, tol = 1e-08, maxiter = 100,
-  verbose = F, fit_mult = T, fit_hyper = T)
+  epi = 0.001, verbose = F, fit_mult = T, fit_hyper = T)
 }
 \arguments{
 \item{res}{Ccube result list}
@@ -20,6 +20,8 @@ RemoveClusterAndReassignVariantsWithEMsteps_sv(res, removeIdx,
 \item{tol}{stopping condition}
 
 \item{maxiter}{maximum iteration}
+
+\item{epi}{sequencing error}
 
 \item{verbose}{show progress}
 }

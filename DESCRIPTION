@@ -24,3 +24,4 @@ Collate:
     'util.R'
     'vbgmm.R'
     'vbsmm.R'
+    'wrapper.R'
