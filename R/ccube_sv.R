@@ -11,7 +11,7 @@
 #' @param verbose show progress
 #' @export
 #' @return a list containing model parameters
-CcubeSVCore <- function(mydata, epi=1e-3, init=2, prior, tol=1e-20, maxiter=1e3, fit_mult = F, fit_hyper = T, use = c("use_base", "use_one"),verbose=FALSE) {
+CcubeSVCore <- function(mydata, epi=1e-3, init=2, prior, tol=1e-20, maxiter=1e3, fit_mult = F, fit_hyper = T, use = c("use_base", "use_one"),verbose=T) {
 
   stopifnot(
     all(c("var_counts1","ref_counts1","normal_cn",
@@ -32,6 +32,8 @@ CcubeSVCore <- function(mydata, epi=1e-3, init=2, prior, tol=1e-20, maxiter=1e3,
   cr2 <- mydata$major_cn2 + mydata$minor_cn2
   major_cn2 <- mydata$major_cn2
   bv2 <- mydata$mult2
+
+  subclonal_cn <- mydata$subclonal_cn
 
 
   purity <- unique(mydata$purity)
@@ -86,9 +88,9 @@ CcubeSVCore <- function(mydata, epi=1e-3, init=2, prior, tol=1e-20, maxiter=1e3,
     vbiter <- vbiter + 1
     model <- VariationalMaximimizationStep_sv(bn1, dn1, cn, cr1, major_cn1,
                                               bn2, dn2, cr2, major_cn2,
-                                              epi, purity, model,
+                                              epi, purity, subclonal_cn, model,
                                               fit_mult = fit_mult, fit_hyper = fit_hyper)
-    model <- model <- VarationalExpectationStep_sv(bn1, dn1, cn, cr1,
+    model <- VarationalExpectationStep_sv(bn1, dn1, cn, cr1,
                                                    bn2, dn2, cr2,
                                                    epi, purity, model)
     L[vbiter] <- VariationalLowerBound_sv(bn1, dn1, cn, cr1,
@@ -270,35 +272,103 @@ GetCcf_sv <- function(mydata, use = c("use_base", "use_one")) {
 }
 
 
-############ helper function to initialize responsibility and other parameters ############
-# initialization <- function(X, init, prior) {
-#
-#   d <- nrow(X)
-#
-#   n <- ncol(X)
-#
-#   stopifnot(length(init) %in% c(1, n) || (nrow(init) == d  & ncol(init) == k))
-#
-#   k <- init
-#   res <- kmeans(t(X), k)
-#   label <- res$cluster
-#   normalMean <- t(res$centers)
-#   if (length(which(normalMean > 1) ) >0 ){
-#     normalMean[which(normalMean>1)] = 1
-#   }
-#   R <- as.matrix(Matrix::sparseMatrix(1:n, label, x=1))
-#   invWhishartScale <- prior$invWhishartScale
-#   ccfMean = unname(normalMean)
-#   ccfCov = array(invWhishartScale, dim = c(d,k))
-#
-#   return(list(R = R, ccfMean = ccfMean, ccfCov = ccfCov))
-# }
+neg_ELBO_bv <- function(x, responsibility, bn, dn, cr, cn, purity, ccfMean, ccfCov, epi=1e-3) {
 
+  w <- purity * (x *(1-epi) -cr*epi) / ((1-purity)*cn + purity * cr)
+  ww <- w^2
+  ef <- w * ccfMean +epi
+
+  term1 <- bn* (log (ef) - ww*ccfCov/(2 * ef^2 ) )
+  term2 <- (dn- bn) * (log (1 - ef) - ww*ccfCov/(2 * (1 - ef)^2))
+
+  L =  sum( responsibility * (term1 + term2 ) )
+
+  return( - L)
+}
+
+
+neg_ELBO_bv_g <- function(x, responsibility, bn, dn, cr, cn, purity, ccfMean, ccfCov, epi=1e-3) {
+
+  w <- purity * (x *(1-epi) -cr*epi) / ((1-purity)*cn + purity * cr)
+  ww <- w^2
+  ef <- w * ccfMean +epi
+  term1 = bn
+  term2 = dn-bn
+
+  dLdEf = term1 * (1/ef + ww*ccfCov/ ef^3 ) + term2 * ( -1/(1-ef) - ww*ccfCov / (1-ef)^3 )
+  dLdW = term1 * ( - w*ccfCov / ef^2  ) + term2 * ( - w*ccfCov/(1-ef)^2 )
+  dEfdW = ccfMean
+
+  dWdBv =  purity * (1-epi)  / ((1-purity)*cn + purity * cr)
+
+  g = sum( responsibility* ( dLdEf*dEfdW*dWdBv + dLdW*dWdBv ) )
+
+  g = -g
+}
+
+ELBO_bv_g <- function(x, responsibility, bn, dn, cr, cn, purity, ccfMean, ccfCov, epi=1e-3) {
+
+  w <- purity * (x *(1-epi) -cr*epi) / ((1-purity)*cn + purity * cr)
+  ww <- w^2
+  ef <- w * ccfMean +epi
+  term1 = bn
+  term2 = dn-bn
+
+  dLdEf = term1 * (1/ef + ww*ccfCov/ ef^3 ) + term2 * ( -1/(1-ef) - ww*ccfCov / (1-ef)^3 )
+  dLdW = term1 * ( - w*ccfCov / ef^2  ) + term2 * ( - w*ccfCov/(1-ef)^2 )
+  dEfdW = ccfMean
+
+  dWdBv =  purity * (1-epi)  / ((1-purity)*cn + purity * cr)
+
+  g = sum( responsibility* ( dLdEf*dEfdW*dWdBv + dLdW*dWdBv ) )
+}
+
+
+neg_ELBO_ccf <- function(x, bn1, dn1, cr1, bv1, bn2, dn2, cr2, bv2,
+                         responsibility, normalMean, invWhishartScale, cn, purity, epi=1e-3) {
+
+  w1 = ( purity*(bv1*(1-epi) - cr1*epi) ) / ( (1-purity)*cn + purity*cr1 )
+  w2 = ( purity*(bv2*(1-epi) - cr2*epi) ) / ( (1-purity)*cn + purity*cr2 )
+
+  ef1 = w1 * x + epi
+  ef2 = w2 * x + epi
+
+
+  term1 <- bn1* log (ef1) + (dn1- bn1) * (log (1 - ef1) )
+  term2 <- bn2* log (ef2) + (dn2- bn2) * (log (1 - ef2) )
+
+  L =  sum( responsibility * (term1 + term2 ) ) -
+    (x-normalMean)^2/(2 * invWhishartScale)
+
+
+  return( - L)
+}
+
+neg_ELBO_ccf_g <- function(x, bn1, dn1, cr1, bv1, bn2, dn2, cr2, bv2,
+                           responsibility, normalMean, invWhishartScale, cn, purity, epi=1e-3) {
+
+  w1 = ( purity*(bv1*(1-epi) - cr1*epi) ) / ( (1-purity)*cn + purity*cr1 )
+  w2 = ( purity*(bv2*(1-epi) - cr2*epi) ) / ( (1-purity)*cn + purity*cr2 )
+
+  ef1 = w1 * x + epi
+  ef2 = w2 * x + epi
+
+  dLdEf1 = bn1/ef1  + (dn1- bn1) / (1 - ef1)
+  dLdEf2 = bn2/ef2  + (dn2- bn2) / (1 - ef2)
+
+  dLdCcf = (normalMean-x)  /invWhishartScale
+  dEf1dCcf = w1
+  dEf2dCcf = w2
+
+  g = sum( responsibility *(  dLdEf1* dEf1dCcf + dLdEf2* dEf2dCcf) ) + dLdCcf
+
+  g = -g
+}
 
 ############ Variational-Maximimization ############
 VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, major_cn1,
                                              bn2, dn2, cr2, major_cn2,
-                                             epi, purity, model,
+                                             epi, purity, subclonal_cn, model,
                                              fit_mult = T, fit_hyper = T) {
 
   bv1 = model$bv1
@@ -314,8 +384,6 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, major_cn1,
   ccfCov = model$ccfCov
 
   k <- length(ccfMean)
-  # Bn = (1-purity)*cn + purity*cr1
-  # Cn = purity*(bv1*(1-epi) - cr1*epi)
 
   w1 = ( purity*(bv1*(1-epi) - cr1*epi) ) / ( (1-purity)*cn + purity*cr1 )
   w2 = ( purity*(bv2*(1-epi) - cr2*epi) ) / ( (1-purity)*cn + purity*cr2 )
@@ -323,6 +391,7 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, major_cn1,
   ccfMeanOld <- ccfMean
 
     for (i in 1:k){
+
 
       term1 = 1/invWhishartScale*normalMean
       term2 = 1/invWhishartScale
@@ -336,12 +405,10 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, major_cn1,
           break
         }
         jj <- jj + 1
+
         if (jj > 1) {upper <- upper + 0.1}
         tmp <- try(suppressWarnings( uniroot(
           function(x) {
-
-            # An = (1-purity)*cn*epi + purity*(1-x)*cr*epi + purity*x*bv*(1-epi)
-            # term4 = (bn/An - (dn-bn)/(Bn-An)) * Cn
 
             ef1 = w1 * x + epi
             ef2 = w2 * x + epi
@@ -353,14 +420,13 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, major_cn1,
           },
           c(lower, upper), extendInt = "yes")$root), T)
       }
+
       ccfMean[i] <- tmp
 
-      # An = (1-purity)*cn*epi + purity*(1-ccfMean[i])*cr*epi + purity*ccfMean[i]*bv*(1-epi)
-      # ccfCov[i] = solve(term2 + sum(responsibility[,i]*(bn/(An^2) + (dn-bn)/((Bn-An)^2) * Cn^2)))
       ef1 = w1 * ccfMean[i] + epi
       ef2 = w2 * ccfMean[i] + epi
 
-      ccfCov[i] = solve(term2 + sum(responsibility[,i]*( w1^2 * (bn1/(ef1)^2 + (dn1-bn1)/( (1-ef1)^2 ) ) +
+      ccfCov[i] = solve(1/invWhishartScale + sum(responsibility[,i]*( w1^2 * (bn1/(ef1)^2 + (dn1-bn1)/( (1-ef1)^2 ) ) +
                                                            w2^2 * (bn2/(ef2)^2 + (dn2-bn2)/( (1-ef2)^2 ) ) )
                                     )
                         )
@@ -378,45 +444,107 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, major_cn1,
     ccfMean[which(ccfMean<1e-20)] = 1e-20
   }
 
-
   numberOfDataPoints <- nrow(responsibility)
   if (fit_mult) {
     for (ii in 1:numberOfDataPoints) {
-      bvPool1 <- 1:major_cn1[ii]
-      qq1 <- rep(NA, length(bvPool1))
-      for (jj in seq_along(bvPool1) ) {
 
-        w1 <- purity * (bvPool1[jj] *(1-epi) -cr1[ii]*epi) / ((1-purity)*cn + purity * cr1[ii])
-        w1w1 <- w1^2
-        ef1 <- w1 * ccfMean +epi
+      if (subclonal_cn[ii]) {
 
-        term1_breakpoint1 <- bn1[ii] * (log (ef1) - w1w1*ccfCov/(2 * ef1^2 ) )
-        term2_breakpoint1 <- (dn1[ii] - bn1[ii]) * (log (1 - ef1) - w1w1*ccfCov/(2 * (1 - ef1)^2)  )
-        term3_breakpoint1 <- logChoose(dn1[ii], bn1[ii])
 
-        qq1[jj] <- sum ( responsibility[ii, ] *  (term1_breakpoint1 + term2_breakpoint1 + term3_breakpoint1)  )
+        m_upper1 = (1-epi)*( (1-purity)*cn + purity*cr1[ii] ) / (ccfMean*purity)*(1-epi) +
+          epi*cr1[ii]/(1-epi)
+        m_lower1 = (0-epi)*( (1-purity)*cn + purity*cr1[ii] ) / (ccfMean*purity)*(1-epi) +
+          epi*cr1[ii]/(1-epi)
+
+        m_upper2 = (1-epi)*( (1-purity)*cn + purity*cr2[ii] ) / (ccfMean*purity)*(1-epi) +
+          epi*cr2[ii]/(1-epi)
+        m_lower2 = (0-epi)*( (1-purity)*cn + purity*cr2[ii] ) / (ccfMean*purity)*(1-epi) +
+          epi*cr2[ii]/(1-epi)
+
+
+        bv1_old = bv1[i]
+
+        upper <- min( c(m_upper1, major_cn1[ii]))
+        lower <- max(c(m_lower1,1))
+
+        if (lower >= upper & upper == major_cn1[ii]) {
+          bv1[ii] = major_cn1[ii]
+        } else {
+          tmp <- try(suppressWarnings( uniroot(
+            ELBO_bv_g, c(lower, upper),
+            bn = bn1[ii], dn=dn1[ii], cr=cr1[ii], cn=cn,
+            purity=purity, ccfMean=ccfMean, ccfCov=ccfCov,
+            epi=epi, responsibility = responsibility[ii,])$root), T)
+
+          if (!is.numeric(tmp)) {
+            bv1[ii] <- min( bv1_old, upper)
+          } else {
+            bv1[ii] <- tmp
+          }
+        }
+
+
+        bv2_old <- bv2[ii]
+        upper <- min(c(m_upper2, major_cn2[ii]))
+        lower <- max( c(m_lower2, 1) )
+
+        if (lower >= upper & upper == major_cn2[ii] ) {
+          bv2[ii] = major_cn2[ii]
+        } else {
+          tmp <- try(suppressWarnings( uniroot(
+            ELBO_bv_g, c(lower, upper),
+            bn = bn2[ii], dn=dn2[ii], cr=cr2[ii], cn=cn,
+            purity=purity, ccfMean=ccfMean, ccfCov=ccfCov,
+            epi=epi, responsibility = responsibility[ii,])$root), T)
+
+
+          if (!is.numeric(tmp)) {
+            bv2[ii] <- min( bv2_old, upper)
+          } else {
+            bv2[ii] <- tmp
+          }
+        }
+
+
+
+      } else {
+        # clonal cn
+        bvPool1 <- 1:major_cn1[ii]
+        qq1 <- rep(NA, length(bvPool1))
+        for (jj in seq_along(bvPool1) ) {
+
+          w1 <- purity * (bvPool1[jj] *(1-epi) -cr1[ii]*epi) / ((1-purity)*cn + purity * cr1[ii])
+          w1w1 <- w1^2
+          ef1 <- w1 * ccfMean +epi
+
+          term1_breakpoint1 <- bn1[ii] * (log (ef1) - w1w1*ccfCov/(2 * ef1^2 ) )
+          term2_breakpoint1 <- (dn1[ii] - bn1[ii]) * (log (1 - ef1) - w1w1*ccfCov/(2 * (1 - ef1)^2)  )
+          term3_breakpoint1 <- logChoose(dn1[ii], bn1[ii])
+
+          qq1[jj] <- sum ( responsibility[ii, ] *  (term1_breakpoint1 + term2_breakpoint1 + term3_breakpoint1)  )
+        }
+        bv1[ii] <- bvPool1[which.max(qq1)]
+
+        bvPool2 <- 1:major_cn2[ii]
+        qq2 <- rep(NA, length(bvPool2))
+        for (jj in seq_along(bvPool2) ) {
+
+          w2 <- purity * (bvPool2[jj] *(1-epi) -cr2[ii]*epi) / ((1-purity)*cn + purity * cr2[ii])
+          w2w2 <- w2^2
+          ef2 <- w2 * ccfMean +epi
+
+          term1_breakpoint2 <- bn2[ii] * (log (ef2) - w2w2*ccfCov/(2 * ef2^2 ) )
+          term2_breakpoint2 <- (dn2[ii] - bn2[ii]) * (log (1 - ef2) - w2w2*ccfCov/(2 * (1 - ef2)^2)  )
+          term3_breakpoint2 <- logChoose(dn2[ii], bn2[ii])
+
+          qq2[jj] <- sum ( responsibility[ii, ] *  (term1_breakpoint2 + term2_breakpoint2 + term3_breakpoint2)  )
+        }
+
+
+        bv2[ii] <- bvPool2[which.max(qq2)]
       }
-      bv1[ii] <- bvPool1[which.max(qq1)]
 
-      bvPool2 <- 1:major_cn2[ii]
-      qq2 <- rep(NA, length(bvPool2))
-      for (jj in seq_along(bvPool2) ) {
-
-        w2 <- purity * (bvPool2[jj] *(1-epi) -cr2[ii]*epi) / ((1-purity)*cn + purity * cr2[ii])
-        w2w2 <- w2^2
-        ef2 <- w2 * ccfMean +epi
-
-        term1_breakpoint2 <- bn2[ii] * (log (ef2) - w2w2*ccfCov/(2 * ef2^2 ) )
-        term2_breakpoint2 <- (dn2[ii] - bn2[ii]) * (log (1 - ef2) - w2w2*ccfCov/(2 * (1 - ef2)^2)  )
-        term3_breakpoint2 <- logChoose(dn2[ii], bn2[ii])
-
-        qq2[jj] <- sum ( responsibility[ii, ] *  (term1_breakpoint2 + term2_breakpoint2 + term3_breakpoint2)  )
-      }
-
-
-      bv2[ii] <- bvPool2[which.max(qq2)]
     }
-
     model$bv1 <- bv1
     model$bv2 <- bv2
   }
