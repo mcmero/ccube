@@ -243,12 +243,15 @@ mydata <- mutate(rowwise(mydata),
 mydata$ccube_mult1 <- res$full.model$bv1
 mydata$ccube_mult2 <- res$full.model$bv2
 
-MakeCcubeStdPlot_sv(mydata, res)
+fn = "~/Desktop/ccube_subclonal_cn_30_70.pdf"
+MakeCcubeStdPlot_sv(mydata, res, printPlot = T, fn = fn)
 
 label1 = res$label
 
 myColors=gg_color_hue(10)
 
+fn = "~/Desktop/event_ccf_comparsions_subclonal_30_70.pdf"
+pdf(fn, width=8, height=4)
 par(mfrow=c(1,2))
 plot(mydata$true_obs_ccf1, mydata$ccube_double_ccf1, col = myColors[label1],
      xlim = c(0, max( c(mydata$true_obs_ccf1, mydata$ccube_double_ccf1) ) ),
@@ -267,3 +270,4 @@ plot(mydata$true_obs_ccf2, mydata$ccube_double_ccf2, col = myColors[label1],
 points( seq(0, max( c(mydata$true_obs_ccf2, mydata$ccube_double_ccf2) ), length.out = 100 ),
         seq(0, max( c(mydata$true_obs_ccf2, mydata$ccube_double_ccf2) ), length.out = 100 ),
         type = "l" )
+dev.off()
