@@ -54,13 +54,14 @@ cnPoolMin <- c(0,1,2)
 cnPoolMajFractions <- c(0.25, 0.25, 0.25,0.25)
 cnPoolMinFractions <- c(1/3, 1/3, 1/3)
 
-subclonal <- sample(c(T, F), numSv, c(1,3), replace = T)
 
 
 # 1st break point
+
+subclonal_cn1 <- sample(c(T, F), numSv, c(1,3), replace = T)
 cnProfile = GenerateSubClonalCNProfile(cnPoolMaj, cnPoolMin,
                            cnPoolMajFractions, cnPoolMinFractions,
-                           numSv, subclonal, ccfCN)
+                           numSv, subclonal_cn1, ccfCN)
 
 mydata <- data.frame(mutation_id = paste0("ss", seq_len(numSv)) ,
                      ccf_true = ccfTrue,
@@ -77,11 +78,11 @@ mydata <- data.frame(mutation_id = paste0("ss", seq_len(numSv)) ,
 mydata$purity <- purity
 mydata$normal_cn <- 2
 mydata <- mutate(rowwise(mydata),
-                 true_mult1_sub1 = sample(seq(1,if (major_cn1_sub1 ==1) { 1 } else {major_cn1_sub1}), 1),
+                 true_mult1_sub1 = sample(c(1,if (major_cn1_sub1 ==1) { 1 } else {major_cn1_sub1}), 1),
                  true_mult1_sub2 = if ( major_cn1_sub2 == -100 ) {
                    -100
                    } else {
-                     sample(seq(1,if (major_cn1_sub2 ==1) { 1 } else {major_cn1_sub2}), 1)
+                     sample(c(1,if (major_cn1_sub2 ==1) { 1 } else {major_cn1_sub2}), 1)
                    },
                  true_mult1 = frac_cn1_sub1 * true_mult1_sub1 + frac_cn1_sub2 * true_mult1_sub2,
                  total_cn1 = frac_cn1_sub1 * total_cn1_sub1 + frac_cn1_sub2 * total_cn1_sub2,
@@ -94,9 +95,10 @@ mydata <- mutate(rowwise(mydata),
                  ref_counts1 = total_counts1 - var_counts1)
 
 # 2nd break point
+subclonal_cn2 <- sample(c(T, F), numSv, c(1,3), replace = T)
 cnProfile = GenerateSubClonalCNProfile(cnPoolMaj, cnPoolMin,
                                        cnPoolMajFractions, cnPoolMinFractions,
-                                       numSv, subclonal, ccfCN)
+                                       numSv, subclonal_cn2, ccfCN)
 
 mydata$minor_cn2_sub1 = cnProfile[,1]
 mydata$major_cn2_sub1 = cnProfile[,2]
@@ -108,11 +110,11 @@ mydata$total_cn2_sub2 = cnProfile[,7]
 mydata$frac_cn2_sub2 = cnProfile[,8]
 
 mydata <- mutate(rowwise(mydata),
-                 true_mult2_sub1 = sample(seq(1,if (major_cn2_sub1 ==1) { 1 } else {major_cn2_sub1}), 1),
+                 true_mult2_sub1 = sample(c(1,if (major_cn2_sub1 ==1) { 1 } else {major_cn2_sub1}), 1),
                  true_mult2_sub2 = if ( major_cn2_sub2 == -100 ) {
                    -100
                  } else {
-                   sample(seq(1,if (major_cn2_sub2 ==1) { 1 } else {major_cn2_sub2}), 1)
+                   sample(c(1,if (major_cn2_sub2 ==1) { 1 } else {major_cn2_sub2}), 1)
                  },
                  true_mult2 = frac_cn2_sub1 * true_mult2_sub1 + frac_cn2_sub2 * true_mult2_sub2,
                  total_cn2 = frac_cn2_sub1 * total_cn2_sub1 + frac_cn2_sub2 * total_cn2_sub2,
@@ -125,7 +127,8 @@ mydata <- mutate(rowwise(mydata),
                  ref_counts2 = total_counts2 - var_counts2
                  )
 
-mydata$subclonal_cn = subclonal
+mydata$subclonal_cn1 = subclonal_cn1
+mydata$subclonal_cn2 = subclonal_cn2
 
 
 doubleBreakPtsRes <- RunCcubePipeline(dataFolder = "~/Dropbox/for_marek/", sampleName = "sv-test-sample",
@@ -208,5 +211,37 @@ plot(mydata$true_obs_ccf2, mydata$ccube_double_ccf2, col = myColors[label1],
 
 points( seq(0, max( c(mydata$true_obs_ccf2, mydata$ccube_double_ccf2) ), length.out = 100 ),
         seq(0, max( c(mydata$true_obs_ccf2, mydata$ccube_double_ccf2) ), length.out = 100 ),
+        type = "l" )
+dev.off()
+
+
+fn = "~/Desktop/cluster_ccf_times_multiplicity_comparsions_subclonal_30_70.pdf"
+pdf(fn, width=8, height=4)
+par(mfrow=c(1,2))
+
+mydata$ccube_ccf_mean <- doubleBreakPtsRes$res$full.model$ccfMean[doubleBreakPtsRes$res$label]
+mydata$true_cluster_ccf1_mult1 = mydata$ccf_true*mydata$true_mult1
+mydata$true_cluster_ccf2_mult2 = mydata$ccf_true*mydata$true_mult2
+mydata$ccube_cluster_ccf1_mult1 = mydata$ccube_ccf_mean*mydata$ccube_double_mult1
+mydata$ccube_cluster_ccf2_mult2 = mydata$ccube_ccf_mean*mydata$ccube_double_mult2
+
+
+plot(mydata$true_cluster_ccf1_mult1, mydata$ccube_cluster_ccf1_mult1, col = myColors[label1],
+     xlim = c(0, max( c(mydata$true_cluster_ccf1_mult1, mydata$ccube_cluster_ccf1_mult1) ) ),
+     ylim = c(0, max( c(mydata$true_cluster_ccf1_mult1, mydata$ccube_cluster_ccf1_mult1) ) ),
+     xlab = "true ccf cluster mean* true multiplicity", ylab = "estimated ccf cluster mean * estimated multiplicity",
+     main = "double model: 1st break point")
+points( seq(0, max( c(mydata$true_cluster_ccf1_mult1, mydata$ccube_cluster_ccf1_mult1) ), length.out = 100 ),
+        seq(0, max( c(mydata$true_cluster_ccf1_mult1, mydata$ccube_cluster_ccf1_mult1) ), length.out = 100 ),
+        type = "l" )
+
+plot(mydata$true_cluster_ccf2_mult2, mydata$ccube_cluster_ccf2_mult2, col = myColors[label1],
+     xlim = c(0, max( c(mydata$true_cluster_ccf2_mult2, mydata$ccube_cluster_ccf2_mult2) ) ),
+     ylim = c(0, max( c(mydata$true_cluster_ccf2_mult2, mydata$ccube_cluster_ccf2_mult2) ) ),
+     xlab = "true ccf cluster mean* true multiplicity", ylab = "estimated ccf cluster mean * estimated multiplicity", main = "double model: 2nd break point"
+)
+
+points( seq(0, max( c(mydata$true_cluster_ccf2_mult2, mydata$ccube_cluster_ccf2_mult2) ), length.out = 100 ),
+        seq(0, max( c(mydata$true_cluster_ccf2_mult2, mydata$ccube_cluster_ccf2_mult2) ), length.out = 100 ),
         type = "l" )
 dev.off()
