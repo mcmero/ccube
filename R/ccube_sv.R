@@ -30,24 +30,24 @@ CcubeSVCore <- function(mydata, epi=1e-3, init=2, prior, tol=1e-20, maxiter=1e3,
   bn1 <- mydata$var_counts1
   cn <- unique(mydata$normal_cn)
   cr1 <- mydata$total_cn1
-  major_cn1_sub1 <- mydata$major_cn1_sub1
-  major_cn1_sub2 <- mydata$major_cn1_sub2
+  max_mult_cn1_sub1 <- mydata$total_cn1_sub1
+  max_mult_cn1_sub2 <- mydata$total_cn1_sub2
   frac_cn1_sub1 <- mydata$frac_cn1_sub1
   frac_cn1_sub2 <- mydata$frac_cn1_sub2
   bv1 <- mydata$mult1
-  bv1_sub1 <- rep(-100, length(major_cn1_sub1))
-  bv1_sub2 <- rep(-100, length(major_cn1_sub1))
+  bv1_sub1 <- rep(-100, length(max_mult_cn1_sub1))
+  bv1_sub2 <- rep(-100, length(max_mult_cn1_sub2))
 
   dn2 <- mydata$ref_counts2 + mydata$var_counts2
   bn2 <- mydata$var_counts2
   cr2 <- mydata$total_cn2
-  major_cn2_sub1 <- mydata$major_cn2_sub1
-  major_cn2_sub2 <- mydata$major_cn2_sub2
+  max_mult_cn2_sub1 <- mydata$total_cn2_sub1
+  max_mult_cn2_sub2 <- mydata$total_cn2_sub2
   frac_cn2_sub1 <- mydata$frac_cn2_sub1
   frac_cn2_sub2 <- mydata$frac_cn2_sub2
   bv2 <- mydata$mult2
-  bv2_sub1 <- rep(-100, length(major_cn1_sub1))
-  bv2_sub2 <- rep(-100, length(major_cn1_sub1))
+  bv2_sub1 <- rep(-100, length(max_mult_cn2_sub1))
+  bv2_sub2 <- rep(-100, length(max_mult_cn2_sub2))
 
   subclonal_cn1 <- mydata$subclonal_cn1
   subclonal_cn2 <- mydata$subclonal_cn2
@@ -106,9 +106,9 @@ CcubeSVCore <- function(mydata, epi=1e-3, init=2, prior, tol=1e-20, maxiter=1e3,
 
   while(!converged & vbiter < maxiter & !degenerated) {
     vbiter <- vbiter + 1
-    model <- VariationalMaximimizationStep_sv(bn1, dn1, cn, cr1, major_cn1_sub1, major_cn1_sub2,
+    model <- VariationalMaximimizationStep_sv(bn1, dn1, cn, cr1, max_mult_cn1_sub1, max_mult_cn1_sub2,
                                               frac_cn1_sub1, frac_cn1_sub2, subclonal_cn1,
-                                              bn2, dn2, cr2, major_cn2_sub1, major_cn2_sub2,
+                                              bn2, dn2, cr2, max_mult_cn2_sub1, max_mult_cn2_sub2,
                                               frac_cn2_sub1, frac_cn2_sub2, subclonal_cn2,
                                               epi, purity, model,
                                               fit_mult = fit_mult, fit_hyper = fit_hyper)
@@ -416,9 +416,9 @@ my_repmat <- function(x, n) {
 
 
 ############ Variational-Maximimization ############
-VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, major_cn1_sub1, major_cn1_sub2,
+VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, max_mult_cn1_sub1, max_mult_cn1_sub2,
                                              frac_cn1_sub1, frac_cn1_sub2, subclonal_cn1,
-                                             bn2, dn2, cr2, major_cn2_sub1, major_cn2_sub2,
+                                             bn2, dn2, cr2, max_mult_cn2_sub1, max_mult_cn2_sub2,
                                              frac_cn2_sub1, frac_cn2_sub2, subclonal_cn2,
                                              epi, purity, model,
                                              fit_mult = T, fit_hyper = T) {
@@ -509,9 +509,9 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, major_cn1_sub1, 
       if (subclonal_cn1[ii]) {
 
 
-        sub_cn1_mults = pracma::meshgrid(0:major_cn1_sub1[ii], 0:major_cn1_sub2[ii])
+        sub_cn1_mults = pracma::meshgrid(0:max_mult_cn1_sub1[ii], 0:max_mult_cn1_sub2[ii])
         bvPool1 <- frac_cn1_sub1[ii] * sub_cn1_mults$X + frac_cn1_sub2[ii] * sub_cn1_mults$Y
-
+        #bvPool1[ bvPool1<1 ] = NA
         bvPool1Mat <- t(my_repmat(as.vector(bvPool1), length(ccfMean)))
         ccfMeanMat <- my_repmat(ccfMean, length(bvPool1))
         ccfCovMat <- my_repmat(ccfCov, length(bvPool1))
@@ -556,7 +556,7 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, major_cn1_sub1, 
 
       } else {
         # clonal cn
-        bvPool1 <- 1:major_cn1_sub1[ii]
+        bvPool1 <- 1:max_mult_cn1_sub1[ii]
 
         qq1 <- rep(NA, length(bvPool1))
         for (jj in seq_along(bvPool1) ) {
@@ -578,8 +578,9 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, major_cn1_sub1, 
 
       # break point 2
       if (subclonal_cn2[ii]) {
-        sub_cn2_mults = pracma::meshgrid(0:major_cn2_sub1[ii], 0:major_cn2_sub2[ii])
+        sub_cn2_mults = pracma::meshgrid(0:max_mult_cn2_sub1[ii], 0:max_mult_cn2_sub2[ii])
         bvPool2 <- frac_cn2_sub1[ii] * sub_cn2_mults$X + frac_cn2_sub2[ii] * sub_cn2_mults$Y
+        #bvPool2[ bvPool2<1 ] = NA
         bvPool2Mat <- t(my_repmat(as.vector(bvPool2), length(ccfMean)) )
         ccfMeanMat <- my_repmat(ccfMean, length(bvPool2))
         ccfCovMat <- my_repmat(ccfCov, length(bvPool2))
@@ -624,7 +625,7 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, major_cn1_sub1, 
 
       } else {
         # clonal cn
-        bvPool2 <- 1:major_cn2_sub1[ii]
+        bvPool2 <- 1:max_mult_cn2_sub1[ii]
 
         qq2 <- rep(NA, length(bvPool2))
         for (jj in seq_along(bvPool2) ) {
@@ -1257,8 +1258,8 @@ RemoveClusterAndReassignVariantsWithEMsteps_sv <- function(res, removeIdx, ssm =
                                                         cn = unique(ssm$normal_cn),
                                                         cr1 = ssm$frac_cn1_sub1 * (ssm$major_cn1_sub1 + ssm$minor_cn1_sub1) +
                                                           ssm$frac_cn1_sub2 *(ssm$major_cn1_sub2 + ssm$minor_cn1_sub2),
-                                                        major_cn1_sub1 = ssm$major_cn1_sub1,
-                                                        major_cn1_sub2 = ssm$major_cn1_sub2,
+                                                        max_mult_cn1_sub1 = ssm$major_cn1_sub1 + ssm$minor_cn1_sub1,
+                                                        max_mult_cn1_sub2 = ssm$major_cn1_sub2 + ssm$minor_cn1_sub2,
                                                         frac_cn1_sub1 = ssm$frac_cn1_sub1,
                                                         frac_cn1_sub2 = ssm$frac_cn1_sub2,
                                                         subclonal_cn1 = ssm$subclonal_cn1,
@@ -1266,8 +1267,8 @@ RemoveClusterAndReassignVariantsWithEMsteps_sv <- function(res, removeIdx, ssm =
                                                         dn2 = ssm$ref_counts2 + ssm$var_counts2,
                                                         cr2 = ssm$frac_cn2_sub1 * (ssm$major_cn2_sub1 + ssm$minor_cn2_sub1) +
                                                           ssm$frac_cn2_sub2 *(ssm$major_cn2_sub2 + ssm$minor_cn2_sub2),
-                                                        major_cn2_sub1 = ssm$major_cn2_sub1,
-                                                        major_cn2_sub2 = ssm$major_cn2_sub2,
+                                                        max_mult_cn2_sub1 = ssm$major_cn2_sub1 + ssm$minor_cn2_sub1,
+                                                        max_mult_cn2_sub2 = ssm$major_cn2_sub2 + ssm$minor_cn2_sub2,
                                                         frac_cn2_sub1 = ssm$frac_cn2_sub1,
                                                         frac_cn2_sub2 = ssm$frac_cn2_sub2,
                                                         subclonal_cn2 = ssm$subclonal_cn2,
