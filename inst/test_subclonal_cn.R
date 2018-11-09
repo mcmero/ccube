@@ -2,6 +2,9 @@ rm(list = ls())
 library(dplyr)
 library(ccube)
 library(doParallel)
+library(ggplot2)
+library(tidyr)
+library(gridExtra)
 
 GenerateCopyNumberProfile <- function(cnPoolMaj, cnPoolMin,cnPoolMajFractions, cnPoolMinFractions, numVariants){
   tmp1 <- sample(cnPoolMaj, numVariants, cnPoolMajFractions, replace =T)
@@ -38,10 +41,10 @@ GenerateSubClonalCNProfile <- function(cnPoolMaj, cnPoolMin,
 registerDoParallel(cores=3)
 set.seed(1234)
 
-numSv <- 500
+numSv <- 150
 numOfClusterPool = 1:6
 numOfRepeat = 1
-baseDepth = 50
+baseDepth = 100
 
 ccfCN <- c(0.7, 0.3)
 
@@ -53,7 +56,6 @@ cnPoolMaj <- c(1,2,3,4)
 cnPoolMin <- c(0,1,2)
 cnPoolMajFractions <- c(0.25, 0.25, 0.25,0.25)
 cnPoolMinFractions <- c(1/3, 1/3, 1/3)
-
 
 
 # 1st break point
@@ -245,3 +247,30 @@ points( seq(0, max( c(mydata$true_cluster_ccf2_mult2, mydata$ccube_cluster_ccf2_
         seq(0, max( c(mydata$true_cluster_ccf2_mult2, mydata$ccube_cluster_ccf2_mult2) ), length.out = 100 ),
         type = "l" )
 dev.off()
+
+
+mydata$error_mult1 =  mydata$ccube_double_mult1 - mydata$true_mult1
+mydata$error_mult2 =  mydata$ccube_double_mult2 - mydata$true_mult2
+
+
+selectedData <- mydata[, c("mutation_id","ccube_ccf_mean", "error_mult1", "error_mult2", "true_mult1", "true_mult2", "total_cn1", "total_cn2")]
+
+fn = "~/Desktop/mults.pdf"
+pdf(fn, width=8, height=8)
+
+selectedData1 = gather(selectedData, key, value, -mutation_id, -total_cn1, -true_mult1, -ccube_ccf_mean)
+tt1 = filter( selectedData1, key %in% c("error_mult1") )
+g1 = ggplot(tt1, aes(y = value, x = as.factor(true_mult1), fill = as.factor(ccube_ccf_mean))) + geom_boxplot() +
+  xlab("true_mult1") +  ylab("error") + theme(legend.position="none")
+
+selectedData2 = gather(selectedData, key, value, -mutation_id, -total_cn2, -true_mult2, -ccube_ccf_mean)
+tt2 = filter( selectedData2, key %in% c("error_mult2") )
+g2 = ggplot(tt2, aes(y = value, x = as.factor(true_mult2), fill = as.factor(ccube_ccf_mean))) + geom_boxplot() + xlab("true_mult2") +
+  ylab("error") + scale_fill_discrete(name="ccube cluster mean", labels= round(doubleBreakPtsRes$res$full.model$ccfMean,2) ) +
+  theme(legend.position="bottom")
+
+grid.arrange(g1, g2, nrow = 2)
+
+
+dev.off()
+
