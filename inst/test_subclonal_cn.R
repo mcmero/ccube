@@ -44,7 +44,7 @@ set.seed(1234)
 numSv <- 150
 numOfClusterPool = 1:6
 numOfRepeat = 1
-baseDepth = 100
+baseDepth = 50
 
 ccfCN <- c(0.7, 0.3)
 
