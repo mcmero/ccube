@@ -30,8 +30,8 @@ CcubeSVCore <- function(mydata, epi=1e-3, init=2, prior, tol=1e-20, maxiter=1e3,
   bn1 <- mydata$var_counts1
   cn <- unique(mydata$normal_cn)
   cr1 <- mydata$total_cn1
-  max_mult_cn1_sub1 <- mydata$total_cn1_sub1
-  max_mult_cn1_sub2 <- mydata$total_cn1_sub2
+  max_mult_cn1_sub1 <- mydata$major_cn1_sub1
+  max_mult_cn1_sub2 <- mydata$major_cn1_sub2
   frac_cn1_sub1 <- mydata$frac_cn1_sub1
   frac_cn1_sub2 <- mydata$frac_cn1_sub2
   bv1 <- mydata$mult1
@@ -41,8 +41,8 @@ CcubeSVCore <- function(mydata, epi=1e-3, init=2, prior, tol=1e-20, maxiter=1e3,
   dn2 <- mydata$ref_counts2 + mydata$var_counts2
   bn2 <- mydata$var_counts2
   cr2 <- mydata$total_cn2
-  max_mult_cn2_sub1 <- mydata$total_cn2_sub1
-  max_mult_cn2_sub2 <- mydata$total_cn2_sub2
+  max_mult_cn2_sub1 <- mydata$major_cn2_sub1
+  max_mult_cn2_sub2 <- mydata$major_cn2_sub2
   frac_cn2_sub1 <- mydata$frac_cn2_sub1
   frac_cn2_sub2 <- mydata$frac_cn2_sub2
   bv2 <- mydata$mult2
@@ -511,7 +511,7 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, max_mult_cn1_sub
 
         sub_cn1_mults = pracma::meshgrid(0:max_mult_cn1_sub1[ii], 0:max_mult_cn1_sub2[ii])
         bvPool1 <- frac_cn1_sub1[ii] * sub_cn1_mults$X + frac_cn1_sub2[ii] * sub_cn1_mults$Y
-        #bvPool1[ bvPool1<1 ] = NA
+        bvPool1[ bvPool1<1 ] = NA
         bvPool1Mat <- t(my_repmat(as.vector(bvPool1), length(ccfMean)))
         ccfMeanMat <- my_repmat(ccfMean, length(bvPool1))
         ccfCovMat <- my_repmat(ccfCov, length(bvPool1))
@@ -580,7 +580,7 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, max_mult_cn1_sub
       if (subclonal_cn2[ii]) {
         sub_cn2_mults = pracma::meshgrid(0:max_mult_cn2_sub1[ii], 0:max_mult_cn2_sub2[ii])
         bvPool2 <- frac_cn2_sub1[ii] * sub_cn2_mults$X + frac_cn2_sub2[ii] * sub_cn2_mults$Y
-        #bvPool2[ bvPool2<1 ] = NA
+        bvPool2[ bvPool2<1 ] = NA
         bvPool2Mat <- t(my_repmat(as.vector(bvPool2), length(ccfMean)) )
         ccfMeanMat <- my_repmat(ccfMean, length(bvPool2))
         ccfCovMat <- my_repmat(ccfCov, length(bvPool2))
@@ -1258,8 +1258,8 @@ RemoveClusterAndReassignVariantsWithEMsteps_sv <- function(res, removeIdx, ssm =
                                                         cn = unique(ssm$normal_cn),
                                                         cr1 = ssm$frac_cn1_sub1 * (ssm$major_cn1_sub1 + ssm$minor_cn1_sub1) +
                                                           ssm$frac_cn1_sub2 *(ssm$major_cn1_sub2 + ssm$minor_cn1_sub2),
-                                                        max_mult_cn1_sub1 = ssm$major_cn1_sub1 + ssm$minor_cn1_sub1,
-                                                        max_mult_cn1_sub2 = ssm$major_cn1_sub2 + ssm$minor_cn1_sub2,
+                                                        max_mult_cn1_sub1 = ssm$major_cn1_sub1,
+                                                        max_mult_cn1_sub2 = ssm$major_cn1_sub2,
                                                         frac_cn1_sub1 = ssm$frac_cn1_sub1,
                                                         frac_cn1_sub2 = ssm$frac_cn1_sub2,
                                                         subclonal_cn1 = ssm$subclonal_cn1,
@@ -1267,8 +1267,8 @@ RemoveClusterAndReassignVariantsWithEMsteps_sv <- function(res, removeIdx, ssm =
                                                         dn2 = ssm$ref_counts2 + ssm$var_counts2,
                                                         cr2 = ssm$frac_cn2_sub1 * (ssm$major_cn2_sub1 + ssm$minor_cn2_sub1) +
                                                           ssm$frac_cn2_sub2 *(ssm$major_cn2_sub2 + ssm$minor_cn2_sub2),
-                                                        max_mult_cn2_sub1 = ssm$major_cn2_sub1 + ssm$minor_cn2_sub1,
-                                                        max_mult_cn2_sub2 = ssm$major_cn2_sub2 + ssm$minor_cn2_sub2,
+                                                        max_mult_cn2_sub1 = ssm$major_cn2_sub1,
+                                                        max_mult_cn2_sub2 = ssm$major_cn2_sub2,
                                                         frac_cn2_sub1 = ssm$frac_cn2_sub1,
                                                         frac_cn2_sub2 = ssm$frac_cn2_sub2,
                                                         subclonal_cn2 = ssm$subclonal_cn2,
