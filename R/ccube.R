@@ -1086,7 +1086,13 @@ RemoveClusterAndReassignVariantsWithEMsteps <- function(res, removeIdx, ssm = NU
       }
 
       res$full.model <- SortClusters(res$full.model)
-      res$label <- apply(res$full.model$responsibility, 1, which.max)
+
+      if (is.null(dim(res$full.model$responsibility)) ) {
+        res$label <- rep(1, length(res$full.model$responsibility))
+      } else {
+        res$label <- apply(res$full.model$responsibility, 1, which.max)
+      }
+
     }
 
 
@@ -1098,10 +1104,18 @@ RemoveClusterAndReassignVariantsWithEMsteps <- function(res, removeIdx, ssm = NU
     if (!is.null(res$mu)) {
       res$mu=res$full.model$ccfMean
     }
+
     if (! is.null(res$full.model$Epi)) {
-      Epi <- (res$full.model$dirichletConcentration + colSums(res$full.model$responsibility)) /
-        (length(res$full.model$ccfMean) * res$full.model$dirichletConcentration0 + length(res$label))
-      res$full.model$Epi <- Epi/sum(Epi)
+
+      if (is.null(dim(res$full.model$responsibility)) ) {
+        res$full.model$Epi <- 1
+      } else {
+        Epi <- (res$full.model$dirichletConcentration + colSums(res$full.model$responsibility)) /
+          (length(res$full.model$ccfMean) * res$full.model$dirichletConcentration0 + length(res$label))
+        res$full.model$Epi <- Epi/sum(Epi)
+      }
+
+
     }
 
   } else {
