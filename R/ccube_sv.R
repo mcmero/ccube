@@ -511,7 +511,7 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, max_mult_cn1_sub
 
         sub_cn1_mults = pracma::meshgrid(0:max_mult_cn1_sub1[ii], 0:max_mult_cn1_sub2[ii])
         bvPool1 <- frac_cn1_sub1[ii] * sub_cn1_mults$X + frac_cn1_sub2[ii] * sub_cn1_mults$Y
-        bvPool1[ bvPool1<1 ] = NA
+        bvPool1[ bvPool1 < 0.6 ] = NA
         bvPool1Mat <- t(my_repmat(as.vector(bvPool1), length(ccfMean)))
         ccfMeanMat <- my_repmat(ccfMean, length(bvPool1))
         ccfCovMat <- my_repmat(ccfCov, length(bvPool1))
@@ -525,9 +525,23 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, max_mult_cn1_sub
         qq1 <- rowSums ( respMat *  (term1_breakpoint1 + term2_breakpoint1 + term3_breakpoint1))
         qq1[1] = NA # remove both multiplicities being zero
         maxQq1 <- which.max(qq1)
-        bv1[ii] <- bvPool1[maxQq1]
-        bv1_sub1[ii] <- sub_cn1_mults$X[maxQq1]
-        bv1_sub2[ii] <- sub_cn1_mults$Y[maxQq1]
+
+        if ( length(maxQq1) == 0 ) {
+          if (frac_cn1_sub1[ii] >= frac_cn1_sub2[ii]) {
+            bv1[ii] <- frac_cn1_sub1[ii]
+            bv1_sub1[ii] = 1
+            bv1_sub2[ii] = 0
+          } else {
+            bv1[ii] <- frac_cn1_sub2[ii]
+            bv1_sub1[ii] = 0
+            bv1_sub2[ii] = 1
+          }
+        } else {
+          bv1[ii] <- bvPool1[maxQq1]
+          bv1_sub1[ii] <- sub_cn1_mults$X[maxQq1]
+          bv1_sub2[ii] <- sub_cn1_mults$Y[maxQq1]
+        }
+
 
 
         # m_upper1 = (1-epi)*( (1-purity)*cn + purity*cr1[ii] ) / (ccfMean*purity)*(1-epi) +
@@ -580,7 +594,7 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, max_mult_cn1_sub
       if (subclonal_cn2[ii]) {
         sub_cn2_mults = pracma::meshgrid(0:max_mult_cn2_sub1[ii], 0:max_mult_cn2_sub2[ii])
         bvPool2 <- frac_cn2_sub1[ii] * sub_cn2_mults$X + frac_cn2_sub2[ii] * sub_cn2_mults$Y
-        bvPool2[ bvPool2<1 ] = NA
+        bvPool2[ bvPool2 < 0.6 ] = NA
         bvPool2Mat <- t(my_repmat(as.vector(bvPool2), length(ccfMean)) )
         ccfMeanMat <- my_repmat(ccfMean, length(bvPool2))
         ccfCovMat <- my_repmat(ccfCov, length(bvPool2))
@@ -594,9 +608,22 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, max_mult_cn1_sub
         qq2 <- rowSums( respMat *  (term1_breakpoint2 + term2_breakpoint2 + term3_breakpoint2))
         qq2[1] = NA
         maxQq2 <- which.max(qq2)
-        bv2[ii] <- bvPool2[maxQq2]
-        bv2_sub1[ii] <- sub_cn2_mults$X[maxQq2]
-        bv2_sub2[ii] <- sub_cn2_mults$Y[maxQq2]
+        if ( length(maxQq2) == 0 ) {
+          if (frac_cn2_sub1[ii] >= frac_cn2_sub2[ii]) {
+            bv2[ii] <- frac_cn2_sub1[ii]
+            bv2_sub1[ii] = 1
+            bv2_sub2[ii] = 0
+          } else {
+            bv2[ii] <- frac_cn2_sub2[ii]
+            bv2_sub1[ii] = 0
+            bv2_sub2[ii] = 1
+          }
+        } else {
+          bv2[ii] <- bvPool2[maxQq2]
+          bv2_sub1[ii] <- sub_cn2_mults$X[maxQq2]
+          bv2_sub2[ii] <- sub_cn2_mults$Y[maxQq2]
+        }
+
 
 
         # m_upper2 = (1-epi)*( (1-purity)*cn + purity*cr2[ii] ) / (ccfMean*purity)*(1-epi) +
@@ -1297,7 +1324,11 @@ RemoveClusterAndReassignVariantsWithEMsteps_sv <- function(res, removeIdx, ssm =
 
       res$full.model <- SortClusters(res$full.model)
 
-      res$label <- apply(res$full.model$responsibility, 1, which.max)
+      if (is.null(dim(res$full.model$responsibility)) ) {
+        res$label <- rep(1, length(res$full.model$responsibility))
+      } else {
+        res$label <- apply(res$full.model$responsibility, 1, which.max)
+      }
     }
 
 
@@ -1310,9 +1341,13 @@ RemoveClusterAndReassignVariantsWithEMsteps_sv <- function(res, removeIdx, ssm =
       res$mu=res$full.model$ccfMean
     }
     if (! is.null(res$full.model$Epi)) {
-      Epi <- (res$full.model$dirichletConcentration + colSums(res$full.model$responsibility)) /
-        (length(res$full.model$ccfMean) * res$full.model$dirichletConcentration0 + length(res$label))
-      res$full.model$Epi <- Epi/sum(Epi)
+      if (is.null(dim(res$full.model$responsibility)) ) {
+        res$full.model$Epi <- 1
+      } else {
+        Epi <- (res$full.model$dirichletConcentration + colSums(res$full.model$responsibility)) /
+          (length(res$full.model$ccfMean) * res$full.model$dirichletConcentration0 + length(res$label))
+        res$full.model$Epi <- Epi/sum(Epi)
+      }
     }
 
   }
