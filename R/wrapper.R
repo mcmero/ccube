@@ -278,7 +278,7 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
       ssm$total_cn2 <- ssm$frac_cn2_sub1 * (ssm$major_cn2_sub1 + ssm$minor_cn2_sub1) +
         ssm$frac_cn2_sub2 * (ssm$major_cn2_sub2 + ssm$minor_cn2_sub2)
 
-      ssm <- mutate(rowwise(ssm),
+      ssm <- dplyr::mutate(rowwise(ssm),
                     vaf1 = var_counts1/(var_counts1+ref_counts1),
                     ccube_ccf1 = MapVaf2CcfPyClone(vaf1,
                                                    purity,
@@ -301,7 +301,7 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
 
       ssm$ccube_ccf_mean <- res$full.model$ccfMean[res$label]
       ssm$ccube_mult <- res$full.model$bv
-      ssm <- mutate(rowwise(ssm),
+      ssm <- dplyr::mutate(rowwise(ssm),
                     vaf = var_counts/(var_counts+ref_counts),
                     ccube_ccf = MapVaf2CcfPyClone(vaf,
                                                   purity,
