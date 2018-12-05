@@ -349,16 +349,27 @@ initialization <- function(X, init, prior) {
               (nrow(init) == d  & ncol(init) == k))
 
   k <- init
-  res <- kmeans(t(X), k)
-  label <- res$cluster
-  normalMean <- t(res$centers)
-  if (length(which(normalMean > 1) ) >0 ){
-    normalMean[which(normalMean>1)] = 1
+
+  if ( k > n  ) {
+
+    normalMean <- rep(1, k)
+    R <- as.matrix(Matrix::sparseMatrix(1:n, sample(1:k, n, replace = T), x=1))
+
+  } else {
+
+    res <- kmeans(t(X), k)
+    label <- res$cluster
+    normalMean <- t(res$centers)
+    if (length(which(normalMean > 1) ) >0 ){
+      normalMean[which(normalMean>1)] = 1
+    }
+    R <- as.matrix(Matrix::sparseMatrix(1:n, label, x=1))
+
   }
-  R <- as.matrix(Matrix::sparseMatrix(1:n, label, x=1))
+
   invWhishartScale <- prior$invWhishartScale
   ccfMean = unname(normalMean)
-  ccfCov = array(invWhishartScale, dim = c(d,k))
+  ccfCov = array(invWhishartScale, dim = c(d,k)) # TODO temporal fix
 
   return(list(R = R,
               ccfMean = ccfMean, ccfCov = ccfCov))
