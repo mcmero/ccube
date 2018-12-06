@@ -4,12 +4,18 @@
 \alias{CullSmallClusters}
 \title{Remove small clusters}
 \usage{
-CullSmallClusters(res, ssm, tol = 0.01, useEstep = T)
+CullSmallClusters(res, ssm, th = 0.01, epi = 0.001, useEstep = T)
 }
 \arguments{
 \item{res}{Ccube result list}
 
 \item{ssm}{Ccub input data}
+
+\item{th}{threshold for small clusters}
+
+\item{epi}{sequencing error}
+
+\item{useEstep}{use Estep for reassignment}
 }
 \value{
 Ccube result list

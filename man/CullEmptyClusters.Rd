@@ -4,12 +4,16 @@
 \alias{CullEmptyClusters}
 \title{Remove empty clusters}
 \usage{
-CullEmptyClusters(res, ssm, useEstep = T)
+CullEmptyClusters(res, ssm, useEstep = T, epi = 0.001)
 }
 \arguments{
 \item{res}{Ccube result list}
 
 \item{ssm}{Ccub input data}
+
+\item{useEstep}{flag to use Estep for reassignment}
+
+\item{epi}{sequencing error}
 }
 \value{
 Ccube result list
