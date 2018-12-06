@@ -24,145 +24,103 @@ devtools::install_github("keyuan/ccube")
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
 
-```{r}
+```{r, results='hide'}
 library(ccube)
 library(dplyr)
-library(colorspace)
-gg_color_hue <- function(n) {
-  hues = seq(15, 375, length=n+1)
-  hcl(h=hues, l=65, c=100)[1:n]
-}
-myColors <- gg_color_hue(10)
+#library(doParallel)
+options(stringsAsFactors = F)
+
 ```
 
-## Runing ccube on a toy dataset
-We generate a toy dataset with 500 mutations 
-```{r, cache=T}
+## Generate a synthetic data set 
+First, we generate a toy dataset with 500 mutations 
+```{r, cache=TRUE}
 set.seed(1234)
 numSnv <- 500
-ccfSet <- c(0.96, 0.6, 0.4)
-ccfTrue <- sample(ccfSet, numSnv, c(0.6,0.2,0.2), replace = T)
+ccfSet <- c(1, 0.4, 0.6) # true ccf pool
+ccfTrue <- sample(ccfSet, numSnv, c(0.5,0.2,0.3), replace = T) # simulate true clusters
 purity <- 0.9
-cnPool <- as.integer(c(2,2,2))
-totalCN <- sample(cnPool, numSnv, c(0.1, 0.6, 0.3), replace =T)
+cnPoolMaj <- c(1,2,3,4) # a pool of possible major copy numbers
+cnPoolMin <- c(0,1,2) # a pool of possible minor copy numbers
+cnPoolMajFractions <- c(0.30, 0.30, 0.2,0.2) # prevalence of possible major copy numbers
+cnPoolMinFractions <- c(1/4, 1/2, 1/4) # prevalence of possible minor copy numbers
 
-mydata <- data.frame(mutation_id = seq_along(ccfTrue),
-                     true_ccf_label=ccfTrue,
-                     total_cn = totalCN, normal_cn = as.integer(2), purity = purity,
-                     stringsAsFactors = F)
+cnProfile = GenerateCopyNumberProfile(cnPoolMaj, cnPoolMin, 
+                                      cnPoolMajFractions, cnPoolMinFractions, numSnv)
 
-mydata <- mutate(rowwise(mydata),
-                 true_mult = sample(1:(if (total_cn ==1) {1} else {total_cn-1}), 1) )
-
-mydata <- mutate(rowwise(mydata),
-                 minor_cn =if (total_cn==1) {as.integer(0)}
-                 else{sample(1:floor(total_cn/2),1)} )
-
-mydata <- mydata <- mutate(rowwise(mydata),
-                           major_cn = total_cn - minor_cn)
-
-mydata <- mutate(rowwise(mydata),
-                 true_vaf = cp2ap(true_ccf_label, purity, normal_cn, total_cn, total_cn, true_mult))
-totReads <- rpois(numSnv, sample(c(30:50), numSnv, replace = T ))
-mydata$total_counts <- totReads
-mydata <- mutate(rowwise(mydata),
-                 var_counts = rbinom(1, total_counts, true_vaf),
-                 ref_counts = total_counts - var_counts)
-mydata <- mutate(rowwise(mydata), 
-                 true_ccf = MapVaf2CcfPyClone(
-                   var_counts/total_counts,
-                   purity,
-                   normal_cn,
-                   total_cn,
-                   total_cn,
-                   true_mult, constraint = F))
-mydata <- mutate(mydata, vaf = var_counts/total_counts)
+head(cnProfile) # column 1: minor copy number, column 2: major copy number, column 3: total copy number 
 ```
 
+
+Simulate cancer cell fractions, multiplicity, and reads counts
 ```{r}
-hist(mydata$true_ccf, 50)
+baseDepth = 50
+mydata <- data.frame(mutation_id = paste0("ss","_", seq_len(numSnv)) ,
+                     ccf_true = ccfTrue,
+                     minor_cn = cnProfile[,1],
+                     major_cn = cnProfile[,2],
+                     total_cn = cnProfile[,3], 
+                     purity = purity,
+                     normal_cn = 2)
 
+mydata <- dplyr::mutate(rowwise(mydata),
+                        mult_true = sample(seq(1,if (major_cn ==1) { 1 } else {major_cn}), 1), # simulate multiplicity
+                        vaf = cp2ap(ccf_true, purity, normal_cn, total_cn, total_cn, mult_true), # simulate vaf
+                        total_counts = rpois(1, total_cn/2 * baseDepth), # simulate total read counts
+                        var_counts = rbinom(1, total_counts, vaf),  # simulate variant read counts
+                        ref_counts = total_counts - var_counts)
+
+head(mydata)
 ```
 
 
-Now we truncate the mixture with 10 clones
+## Run Ccube pipeline 
 ```{r, cache=T}
-K =10
-res <- ccube_m6(mydata, epi=1e-3,
-                init=K, tol = 1e-9, maxiter = 1e3, fit_mult = T, fit_hyper = T, 
-                use = "use_base", verbose = F)
-mydata$ccube_ccf_mean <- res$mu[res$label]
-mydata$ccube_mult <- res$full.model$bv
+
+numOfClusterPool = 1:6
+numOfRepeat = 1
+results <- RunCcubePipeline(ssm = mydata, 
+                            numOfClusterPool = numOfClusterPool, 
+                            numOfRepeat = numOfRepeat,
+                            runAnalysis = T, 
+                            runQC = T, 
+                            multiCore = F,
+                            basicFormats = F, 
+                            allFormats = F, 
+                            returnAll = T)
 ```
-Estimated ccf cluster mean and their weights
+
+The `results` list contains four variables:
+
+* `res`: Optimal model solution
+  * `label`: Most likely cluster assignments
+  * `full.model`: All Ccube model parameters
+    * `responsibility`: Cluster assigment probabilities
+    * `ccfMean`: Cluster means, $\mu_k$
+    * `ccfCov`: Cluster variance $\sigma^2_k$
+    * `bv`: Multiplicity estimates
+    * `Epi`: Mean of dirchlet posterior
+    * `dirichletConcentration`: Concentration parameter of dirchlet posterior
+    * `dirichletConcentration0`: Concentration parameter of dirchlet prior
+    * `normalMean`: Mean of normal prior
+    * `invWhishartScale`: Variance of normal prior
+  * `L`: ELBO trace 
+* `ssm`: A data frame of processed mutations with additional annotations 
+  * `ccube_ccf_mean`: CCF cluster mean
+  * `ccube_mult`: Ccube multiplicity estimates
+  * `ccube_ccf`: Event CCF, i.e. CCF estimates for individual SNV 
+* `results`: A list all fitted models. Each element is structured the same as `res`
+* `lb`: Best ELBO across fitted models
+
+Finally, we make a default plot of Ccube results 
 ```{r}
-Emu <- res$full.model$ccfMean
-Epi <- res$full.model$Epi
-names(Epi) <- as.character(format(round(Emu, 2), nsmall = 2))
-barplot(Epi, las = 2, 
-        xlab = "cluster mean", ylab="expected weight", 
-        main = "cluster weights")
-
+MakeCcubeStdPlot(ssm = results$ssm, res = results$res, printPlot = F)
 ```
 
-Trace of the variational lower bound
-```{r}
-plot(res$L, type="l")
 
-```
-```{r}
-mydata <- mutate(rowwise(mydata),
-                 ccube_ccf = MapVaf2CcfPyClone(var_counts/(var_counts+ref_counts),
-                                         purity,
-                                         normal_cn,
-                                         major_cn + minor_cn,
-                                         major_cn + minor_cn,
-                                         ccube_mult,
-                                         constraint=F))
-```
 
-Here is a graph summary of ccube results. 
-```{r}
-library(colorspace)
 
-par(mfrow=c(2,2))
-uniqLabels <- unique(res$label)
-plot(mydata$ccube_ccf, mydata$vaf, col = myColors[res$label], 
-     xlab = "cancer cell fraction", ylab = "variant allele frequecy", 
-     main = "ccf vs vaf (colored by cluster memebership)")
-mydata$total_cn =mydata$major_cn+mydata$minor_cn
-uniqueTotCn = unique(mydata$total_cn)
-xx = seq(0,2, length.out = 100)
-for (cn in uniqueTotCn) {
-  for (i in 1:cn) {
-    points(MapVaf2CcfPyClone(xx, purity, 2, cn, cn, i, constraint = F), xx, type = 'l')
-  }
-}
-  
-  
-Emu <- res$full.model$ccfMean
-Esigma <- res$full.model$ccfCov
-Epi <- res$full.model$Epi
-params <- data.frame(Emu, Esigma, Epi)
-xx <- seq(0, 2,  length.out = 1000)
-ll <- 0
-ll1 <- 0 
-  
-for (j in seq_len(nrow(params))) {
-  ll <- ll + params[j,]$Epi * dnorm(xx, mean = params[j,]$Emu, sd = sqrt(params[j,]$Esigma))
-}
 
-hist(mydata$ccube_ccf, density=20, breaks=20, prob=TRUE, 
-           main = "ccf histogram +
-     fitted marginal denstiy (red)",
-           xlab = "cancer cell fraction")
-lines(xx,ll, lwd=2, col = "darkred")
-
-names(Epi) <- as.character(format(round(Emu, 2), nsmall = 2))
-barplot(Epi[sort(uniqLabels)], las = 2, col = myColors[sort(uniqLabels)], 
-        xlab = "cluster mean", ylab="expected weight", 
-        main = "cluster weights")
-```
 
 
 
