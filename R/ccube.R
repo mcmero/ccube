@@ -162,14 +162,30 @@ CcubeCore <- function(mydata, epi=1e-3, init=2, prior, tol=1e-20, maxiter=1e3, f
 
   stopifnot(
     all(c("var_counts","ref_counts","normal_cn",
-          "major_cn","minor_cn","purity") %in% names(mydata)))
+          "purity", "subclonal_cn") %in% names(mydata)))
+
+  stopifnot(
+    all(c("major_cn_sub1","major_cn_sub2","minor_cn_sub1", "minor_cn_sub2",
+          "frac_cn_sub1", "frac_cn_sub2")
+        %in% names(mydata)))
+
+
   mydata <- GetCcf(mydata, use=use)
 
   dn <- mydata$ref_counts + mydata$var_counts
   bn <- mydata$var_counts
   cn <- mydata$normal_cn
-  cr <- mydata$major_cn + mydata$minor_cn
-  major_cn <- mydata$major_cn
+  cr <- mydata$total_cn
+
+  max_mult_cn_sub1 <- mydata$major_cn_sub1
+  max_mult_cn_sub2 <- mydata$major_cn_sub2
+  frac_cn_sub1 <- mydata$frac_cn_sub1
+  frac_cn_sub2 <- mydata$frac_cn_sub2
+  bv <- mydata$mult
+  bv_sub1 <- rep(-100, length(max_mult_cn_sub1))
+  bv_sub2 <- rep(-100, length(max_mult_cn_sub2))
+  subclonal_cn <- mydata$subclonal_cn
+
   purity <- unique(mydata$purity)
   bv <- mydata$mult
   rawCcf <- mydata$ccf
@@ -214,13 +230,16 @@ CcubeCore <- function(mydata, epi=1e-3, init=2, prior, tol=1e-20, maxiter=1e3, f
   model$ccfMean <- initParams$ccfMean
   model$ccfCov <- initParams$ccfCov
   model$bv <- bv
+  model$bv_sub1 <- bv_sub1
+  model$bv_sub2 <- bv_sub2
   model$dirichletConcentration0 <- prior$dirichletConcentration
   model$normalMean <- prior$normalMean
   model$invWhishartScale <- prior$invWhishartScale
 
   while(!converged & vbiter < maxiter & !degenerated) {
     vbiter <- vbiter + 1
-    model <- VariationalMaximimizationStep(bn, dn, cn, cr, major_cn, epi, purity, model,
+    model <- VariationalMaximimizationStep(bn, dn, cn, cr, max_mult_cn_sub1, max_mult_cn_sub2,
+                                           frac_cn_sub1, frac_cn_sub2, subclonal_cn, epi, purity, model,
                                            fit_mult = fit_mult, fit_hyper = fit_hyper)
     model <- VarationalExpectationStep(bn, dn, cn, cr, epi, purity, model)
     L[vbiter] <- VariationalLowerBound(bn, dn, cn, cr, epi, purity, model)/n
@@ -269,8 +288,20 @@ GetCcf <- function(mydata, use = c("use_base", "use_one")) {
     mydata <- dplyr::mutate(mydata, total_counts = ref_counts + var_counts)
   }
 
+
+
+  if (!"major_cn" %in% names(mydata)) {
+    mydata <- dplyr::mutate(mydata, major_cn = frac_cn_sub1 * major_cn_sub1 +
+                              frac_cn_sub2 * major_cn_sub2)
+  }
+
+  if (!"minor_cn" %in% names(mydata)) {
+    mydata <- dplyr::mutate(mydata, minor_cn = frac_cn_sub1 * minor_cn_sub1 +
+                              frac_cn_sub2 * minor_cn_sub2 )
+  }
+
   if (!"total_cn" %in% names(mydata)) {
-    mydata <- dplyr::mutate(mydata, total_cn = major_cn + minor_cn)
+    mydata <- dplyr::mutate(mydata, total_cn = major_cn + minor_cn )
   }
 
   if (use=="use_base") {
@@ -350,10 +381,10 @@ initialization <- function(X, init, prior) {
 
   k <- init
 
-  if ( k > n  ) {
+  if ( k > n | k == n  ) {
 
-    normalMean <- rep(1, k)
-    R <- as.matrix(Matrix::sparseMatrix(1:n, sample(1:k, n, replace = T), x=1))
+    normalMean <- t(rep(1, k))
+    R <- as.matrix(Matrix::sparseMatrix(1:n, sample(1:k, n, replace = T), x=1, dims = c(n, k)))
 
   } else {
 
@@ -363,7 +394,7 @@ initialization <- function(X, init, prior) {
     if (length(which(normalMean > 1) ) >0 ){
       normalMean[which(normalMean>1)] = 1
     }
-    R <- as.matrix(Matrix::sparseMatrix(1:n, label, x=1))
+    R <- as.matrix(Matrix::sparseMatrix(1:n, label, x=1, dims = c(n, k)))
 
   }
 
@@ -377,9 +408,14 @@ initialization <- function(X, init, prior) {
 
 
 ############ Variational-Maximimization ############
-VariationalMaximimizationStep <- function(bn, dn, cn, cr, major_cn, epi, purity, model, fit_mult = F, fit_hyper = T) {
+VariationalMaximimizationStep <- function(bn, dn, cn, cr, max_mult_cn_sub1, max_mult_cn_sub2,
+                                          frac_cn_sub1, frac_cn_sub2, subclonal_cn,
+                                          epi, purity, model, fit_mult = F, fit_hyper = T) {
 
   bv <- model$bv
+  bv_sub1 <- model$bv_sub1
+  bv_sub2 <- model$bv_sub2
+
   dirichletConcentration0 <- model$dirichletConcentration0
   responsibility <- model$responsibility
   normalMean <- model$normalMean
@@ -442,21 +478,71 @@ VariationalMaximimizationStep <- function(bn, dn, cn, cr, major_cn, epi, purity,
   numberOfDataPoints <- nrow(responsibility)
   if (fit_mult) {
     for (ii in 1:numberOfDataPoints) {
-      bvPool <- 1:major_cn[ii]
-      qq <- rep(NA, length(bvPool))
-      for (jj in seq_along(bvPool) ) {
-        aa <- purity * (bvPool[jj] *(1-epi) -cr[ii]*epi) / ((1-purity)*cn[ii] + purity * cr[ii])
-        aa2 <- aa^2
-        bb <- epi
-        term1 <- sum(responsibility[ii, ] * bn[ii] * (log (aa * ccfMean +bb) - aa2*ccfCov/(2 * (aa * ccfMean +bb)^2 ) ))
-        term2 <- sum(responsibility[ii, ] * (dn[ii] - bn[ii]) * (log (1 - aa * ccfMean - bb) - aa2*ccfCov/(2 * (1 - aa * ccfMean -bb)^2)  ))
-        term3 <- sum( responsibility[ii, ]*  logChoose(dn[ii], bn[ii]) )
-        qq[jj] <- term1 + term2 + term3
+      # TODO: General implementation of more than two subclonal copy number populations
+
+      if (subclonal_cn[ii]) {
+
+        sub_cn_mults = pracma::meshgrid(0:max_mult_cn_sub1[ii], 0:max_mult_cn_sub2[ii])
+        bvPool <- frac_cn_sub1[ii] * sub_cn_mults$X + frac_cn_sub2[ii] * sub_cn_mults$Y
+        bvPool[ bvPool < 0.6 ] = NA
+        bvPoolMat <- t(my_repmat(as.vector(bvPool), length(ccfMean)))
+        ccfMeanMat <- my_repmat(ccfMean, length(bvPool))
+        ccfCovMat <- my_repmat(ccfCov, length(bvPool))
+        respMat <- my_repmat(responsibility[ii, ], length(bvPool))
+        w <- purity * (bvPoolMat*(1-epi) -cr[ii]*epi) / ((1-purity)*cn[ii] + purity * cr[ii])
+        ww <- w^2
+        ef <- w * ccfMeanMat +epi
+        term1 <- bn[ii] * (log (ef) - ww*ccfCovMat/(2 * ef^2 ) )
+        term2 <- (dn[ii] - bn[ii]) * (log (1 - ef) - ww*ccfCovMat/(2 * (1 - ef)^2)  )
+        term3 <- logChoose(dn[ii], bn[ii])
+        qq <- rowSums ( respMat *  (term1 + term2 + term3))
+        qq[1] = NA # remove both multiplicities being zero
+        maxQq <- which.max(qq)
+
+
+        if ( length(maxQq) == 0 ) {
+          if (frac_cn_sub1[ii] >= frac_cn_sub2[ii]) {
+            bv[ii] <- frac_cn_sub1[ii]
+            bv_sub1[ii] = 1
+            bv_sub2[ii] = 0
+          } else {
+            bv[ii] <- frac_cn_sub2[ii]
+            bv_sub1[ii] = 0
+            bv_sub2[ii] = 1
+          }
+        } else {
+          bv[ii] <- bvPool[maxQq]
+          bv_sub1[ii] <- sub_cn_mults$X[maxQq]
+          bv_sub2[ii] <- sub_cn_mults$Y[maxQq]
+        }
+
+
+      } else {
+
+        bvPool <- 1:max_mult_cn_sub1[ii]
+        qq <- rep(NA, length(bvPool))
+        for (jj in seq_along(bvPool) ) {
+          aa <- purity * (bvPool[jj] *(1-epi) -cr[ii]*epi) / ((1-purity)*cn[ii] + purity * cr[ii])
+          aa2 <- aa^2
+          bb <- epi
+          term1 <- sum(responsibility[ii, ] * bn[ii] * (log (aa * ccfMean +bb) - aa2*ccfCov/(2 * (aa * ccfMean +bb)^2 ) ))
+          term2 <- sum(responsibility[ii, ] * (dn[ii] - bn[ii]) * (log (1 - aa * ccfMean - bb) - aa2*ccfCov/(2 * (1 - aa * ccfMean -bb)^2)  ))
+          term3 <- sum( responsibility[ii, ]*  logChoose(dn[ii], bn[ii]) )
+          qq[jj] <- term1 + term2 + term3
+        }
+        maxQq <- which.max(qq)
+        if ( length(maxQq) == 0 ) {
+          bv[ii] <- 1
+        } else {
+          bv[ii] <- bvPool[maxQq]
+        }
+
       }
-      bv[ii] <- bvPool[which.max(qq)]
 
     }
     model$bv <- bv
+    model$bv_sub1 <- bv_sub1
+    model$bv_sub2 <- bv_sub2
   }
 
   # estimate hyper-parameters
@@ -688,7 +774,8 @@ MakeCcubeStdPlot <- function(ssm, res, myColors=gg_color_hue(10), printPlot = F,
        xlab = "cancer cell fraction", ylab = "variant allele frequecy",
        main = "ccf vs vaf (colored by cluster memebership)")
   cellularity <- unique(ssm$purity)
-  ssm$total_cn =ssm$major_cn+ssm$minor_cn
+  ssm$total_cn =ssm$frac_cn_sub1 * (ssm$major_cn_sub1 + ssm$minor_cn_sub1) +
+    ssm$frac_cn_sub2 *(ssm$major_cn_sub2 + ssm$minor_cn_sub2)
   uniqueTotCn = unique(ssm$total_cn)
   xx = seq(0,2, length.out = 100)
   for (cn in uniqueTotCn) {
@@ -944,7 +1031,8 @@ RemoveClusterAndReassignVariantsWithEstep <- function(res, removeIdx, ssm = NULL
       res$full.model <- VarationalExpectationStep(bn = ssm$var_counts,
                                        dn = ssm$ref_counts + ssm$var_counts,
                                        cn = ssm$normal_cn,
-                                       cr = ssm$major_cn + ssm$minor_cn,
+                                       cr = ssm$frac_cn_sub1 * (ssm$major_cn_sub1 + ssm$minor_cn_sub1) +
+                                         ssm$frac_cn_sub2 *(ssm$major_cn_sub2 + ssm$minor_cn_sub2),
                                        epi = epi,
                                        purity = unique(ssm$purity),
                                        model = res$full.model)
@@ -993,7 +1081,8 @@ RemoveClusterAndReassignVariantsWithEstep <- function(res, removeIdx, ssm = NULL
       res <- VarationalExpectationStep(bn = ssm$var_counts,
                                        dn = ssm$ref_counts + ssm$var_counts,
                                        cn = ssm$normal_cn,
-                                       cr = ssm$major_cn + ssm$minor_cn,
+                                       cr = ssm$frac_cn_sub1 * (ssm$major_cn_sub1 + ssm$minor_cn_sub1) +
+                                         ssm$frac_cn_sub2 *(ssm$major_cn_sub2 + ssm$minor_cn_sub2),
                                        epi = 1e-3,
                                        purity = unique(ssm$purity),
                                        model = res)
@@ -1068,7 +1157,8 @@ RemoveClusterAndReassignVariantsWithEMsteps <- function(res, removeIdx, ssm = NU
         res$full.model <- VarationalExpectationStep(bn = ssm$var_counts,
                                                     dn = ssm$ref_counts + ssm$var_counts,
                                                     cn = ssm$normal_cn,
-                                                    cr = ssm$major_cn + ssm$minor_cn,
+                                                    cr = ssm$frac_cn_sub1 * (ssm$major_cn_sub1 + ssm$minor_cn_sub1) +
+                                                      ssm$frac_cn_sub2 *(ssm$major_cn_sub2 + ssm$minor_cn_sub2),
                                                     epi = epi,
                                                     purity = unique(ssm$purity),
                                                     model = res$full.model)
@@ -1076,8 +1166,13 @@ RemoveClusterAndReassignVariantsWithEMsteps <- function(res, removeIdx, ssm = NU
         res$full.model <- VariationalMaximimizationStep(bn = ssm$var_counts,
                                                         dn = ssm$ref_counts + ssm$var_counts,
                                                         cn = ssm$normal_cn,
-                                                        cr = ssm$major_cn + ssm$minor_cn,
-                                                        major_cn = ssm$major_cn,
+                                                        cr = ssm$frac_cn_sub1 * (ssm$major_cn_sub1 + ssm$minor_cn_sub1) +
+                                                          ssm$frac_cn_sub2 *(ssm$major_cn_sub2 + ssm$minor_cn_sub2),
+                                                        max_mult_cn_sub1 = ssm$major_cn_sub1,
+                                                        max_mult_cn_sub2 = ssm$major_cn_sub2,
+                                                        frac_cn_sub1 = ssm$frac_cn_sub1,
+                                                        frac_cn_sub2 = ssm$frac_cn_sub2,
+                                                        subclonal_cn = ssm$subclonal_cn,
                                                         epi = epi,
                                                         purity = unique(ssm$purity),
                                                         model = res$full.model,fit_mult = fit_mult,
@@ -1086,7 +1181,8 @@ RemoveClusterAndReassignVariantsWithEMsteps <- function(res, removeIdx, ssm = NU
         ll[vbiter] = VariationalLowerBound(bn = ssm$var_counts,
                                    dn = ssm$ref_counts + ssm$var_counts,
                                    cn = ssm$normal_cn,
-                                   cr = ssm$major_cn + ssm$minor_cn,
+                                   cr = ssm$frac_cn_sub1 * (ssm$major_cn_sub1 + ssm$minor_cn_sub1) +
+                                     ssm$frac_cn_sub2 *(ssm$major_cn_sub2 + ssm$minor_cn_sub2),
                                    epi = epi,
                                    purity = unique(ssm$purity),
                                    model = res$full.model)/length(res$label)
@@ -1152,7 +1248,8 @@ RemoveClusterAndReassignVariantsWithEMsteps <- function(res, removeIdx, ssm = NU
       res <- VarationalExpectationStep(bn = ssm$var_counts,
                                        dn = ssm$ref_counts + ssm$var_counts,
                                        cn = ssm$normal_cn,
-                                       cr = ssm$major_cn + ssm$minor_cn,
+                                       cr = ssm$frac_cn_sub1 * (ssm$major_cn_sub1 + ssm$minor_cn_sub1) +
+                                         ssm$frac_cn_sub2 *(ssm$major_cn_sub2 + ssm$minor_cn_sub2),,
                                        epi = 1e-3,
                                        purity = unique(ssm$purity),
                                        model = res)

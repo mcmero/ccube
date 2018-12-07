@@ -349,11 +349,11 @@ gg_color_hue <- function(n) {
 
 
 #' Simulate a clonal copy number profile
-#' @param cnPoolMaj of colors
-#' @param cnPoolMin
-#' @param cnPoolMajFractions
-#' @param cnPoolMinFractions
-#' @param numVariants
+#' @param cnPoolMaj a pool of possible major copy numbers
+#' @param cnPoolMin a pool of possible minor copy numbers
+#' @param cnPoolMajFractions prevalence of possible major copy numbers
+#' @param cnPoolMinFractions prevalence of possible minor copy numbers
+#' @param numVariants number of variants
 #' @return cnProfile, a matrix with the minor copy number, major copy number, and total copy number as its 1st, 2nd, and 3rd column
 #' @export
 GenerateCopyNumberProfile <- function(cnPoolMaj, cnPoolMin,cnPoolMajFractions, cnPoolMinFractions, numVariants){
@@ -366,12 +366,14 @@ GenerateCopyNumberProfile <- function(cnPoolMaj, cnPoolMin,cnPoolMajFractions, c
 }
 
 #' Simulate a 2-subclone subclonal copy number profile.
-#' @param cnPoolMaj of colors
-#' @param cnPoolMin
-#' @param cnPoolMajFractions
-#' @param cnPoolMinFractions
-#' @param numVariants
-
+#' @param cnPoolMaj a pool of possible major copy numbers
+#' @param cnPoolMin a pool of possible minor copy numbers
+#' @param cnPoolMajFractions prevalence of possible major copy numbers
+#' @param cnPoolMinFractions prevalence of possible minor copy numbers
+#' @param numVariants number of variants
+#' @param subclonal a binary indicator of subclonal status, 1 for subclonal, 0 for clonal.
+#' @param ccfCN prevalence of the subclonal copy numbers
+#' @export
 GenerateSubClonalCNProfile <- function(cnPoolMaj, cnPoolMin,
                                        cnPoolMajFractions, cnPoolMinFractions,
                                        numVariants, subclonal, ccfCN) {

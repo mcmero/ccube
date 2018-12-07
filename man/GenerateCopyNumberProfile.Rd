@@ -8,7 +8,15 @@ GenerateCopyNumberProfile(cnPoolMaj, cnPoolMin, cnPoolMajFractions,
   cnPoolMinFractions, numVariants)
 }
 \arguments{
-\item{cnPoolMaj}{of colors}
+\item{cnPoolMaj}{a pool of possible major copy numbers}
+
+\item{cnPoolMin}{a pool of possible minor copy numbers}
+
+\item{cnPoolMajFractions}{prevalence of possible major copy numbers}
+
+\item{cnPoolMinFractions}{prevalence of possible minor copy numbers}
+
+\item{numVariants}{number of variants}
 }
 \value{
 cnProfile, a matrix with the minor copy number, major copy number, and total copy number as its 1st, 2nd, and 3rd column

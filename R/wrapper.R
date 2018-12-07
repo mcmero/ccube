@@ -301,13 +301,17 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
 
       ssm$ccube_ccf_mean <- res$full.model$ccfMean[res$label]
       ssm$ccube_mult <- res$full.model$bv
+
+      ssm$total_cn <- ssm$frac_cn_sub1 * (ssm$major_cn_sub1 + ssm$minor_cn_sub1) +
+        ssm$frac_cn_sub2 * (ssm$major_cn_sub2 + ssm$minor_cn_sub2)
+
       ssm <- dplyr::mutate(rowwise(ssm),
                     vaf = var_counts/(var_counts+ref_counts),
                     ccube_ccf = MapVaf2CcfPyClone(vaf,
                                                   purity,
                                                   normal_cn,
-                                                  major_cn + minor_cn,
-                                                  major_cn + minor_cn,
+                                                  total_cn,
+                                                  total_cn,
                                                   ccube_mult,
                                                   constraint=F) )
     }

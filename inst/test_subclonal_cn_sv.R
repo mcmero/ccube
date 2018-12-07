@@ -6,38 +6,6 @@ library(ggplot2)
 library(tidyr)
 library(gridExtra)
 
-GenerateCopyNumberProfile <- function(cnPoolMaj, cnPoolMin,cnPoolMajFractions, cnPoolMinFractions, numVariants){
-  tmp1 <- sample(cnPoolMaj, numVariants, cnPoolMajFractions, replace =T)
-  tmp2 <- sample(cnPoolMin, numVariants, cnPoolMinFractions, replace =T)
-  cnProfileTot <- tmp1 + tmp2
-  cnProfile <- cbind(tmp1, tmp2, cnProfileTot )
-  cnProfile <- t( apply(cnProfile, 1, sort) )
-  return(cnProfile)
-}
-
-GenerateSubClonalCNProfile <- function(cnPoolMaj, cnPoolMin,
-                                       cnPoolMajFractions, cnPoolMinFractions,
-                                       numVariants, subclonal, ccfCN) {
-  cnProfile <- matrix(-100, nrow = numVariants, ncol = 8)
-  for (ii in 1:numVariants) {
-    if (subclonal[ii]) {
-      tmp1 = tmp2 = NA
-      while (  identical(tmp1, tmp2) ) {
-        tmp1 = GenerateCopyNumberProfile(cnPoolMaj, cnPoolMin,cnPoolMajFractions, cnPoolMinFractions, 1)
-        tmp2 = GenerateCopyNumberProfile(cnPoolMaj, cnPoolMin,cnPoolMajFractions, cnPoolMinFractions, 1)
-      }
-      cnProfile[ii, ] = c(tmp1, ccfCN[1], tmp2, ccfCN[2])
-    } else {
-      cnProfile[ii, 1:4] = c( GenerateCopyNumberProfile(cnPoolMaj, cnPoolMin,
-                                                        cnPoolMajFractions, cnPoolMinFractions,
-                                                        1), 1)
-      cnProfile[ii, 8] = 0
-    }
-  }
-
-  return(cnProfile)
-}
-
 registerDoParallel(cores=3)
 set.seed(1234)
 
@@ -133,8 +101,7 @@ mydata$subclonal_cn1 = subclonal_cn1
 mydata$subclonal_cn2 = subclonal_cn2
 
 
-doubleBreakPtsRes <- RunCcubePipeline(dataFolder = "~/Dropbox/for_marek/", sampleName = "sv-test-sample",
-                                      ssm = mydata, modelSV = T,
+doubleBreakPtsRes <- RunCcubePipeline(ssm = mydata, modelSV = T,
                                       numOfClusterPool = numOfClusterPool, numOfRepeat = numOfRepeat,
                                       runAnalysis = T, runQC = T,
                                       ccubeResultRDataFile = "~/Dropbox/for_marek/ccube_sv_subclonal_results.RData", multiCore = T,
@@ -144,10 +111,9 @@ doubleBreakPtsRes <- RunCcubePipeline(dataFolder = "~/Dropbox/for_marek/", sampl
 fn1 = "~/Desktop/double_break_points_subclonal_results.pdf"
 MakeCcubeStdPlot_sv(res = doubleBreakPtsRes$res, ssm = doubleBreakPtsRes$ssm, printPlot = T, fn = fn1)
 
-
+mydata <- doubleBreakPtsRes$ssm
 
 mydata <- mutate(rowwise(mydata),
-                 vaf1 = var_counts1/(var_counts1+ref_counts1),
                  true_obs_ccf1 = MapVaf2CcfPyClone(vaf1,
                                                    purity,
                                                    normal_cn,
@@ -155,7 +121,6 @@ mydata <- mutate(rowwise(mydata),
                                                    total_cn1,
                                                    true_mult1,
                                                    constraint=F),
-                 vaf2 = var_counts2/(var_counts2+ref_counts2),
                  true_obs_ccf2 = MapVaf2CcfPyClone(vaf2,
                                                    purity,
                                                    normal_cn,
@@ -163,30 +128,6 @@ mydata <- mutate(rowwise(mydata),
                                                    total_cn2,
                                                    true_mult2,
                                                    constraint=F)
-)
-
-mydata$ccube_double_mult1 = doubleBreakPtsRes$res$full.model$bv1
-mydata$ccube_double_mult2 = doubleBreakPtsRes$res$full.model$bv2
-
-mydata <- mutate(rowwise(mydata),
-              vaf1 = var_counts1/(var_counts1+ref_counts1),
-              ccube_double_ccf1 = MapVaf2CcfPyClone(vaf1,
-                                             purity,
-                                             normal_cn,
-                                             total_cn1,
-                                             total_cn1,
-                                             ccube_double_mult1,
-                                             constraint=F),
-              vaf2 = var_counts2/(var_counts2+ref_counts2),
-              ccube_double_ccf2 = MapVaf2CcfPyClone(vaf2,
-                                             purity,
-                                             normal_cn,
-                                             total_cn2,
-                                             total_cn2,
-                                             ccube_double_mult2,
-                                             constraint=F),
-              ccube_ccf1 = ccube_double_ccf1,
-              ccube_ccf2 = ccube_double_ccf2
 )
 
 
@@ -197,22 +138,22 @@ myColors=gg_color_hue(10)
 fn = "~/Desktop/event_ccf_comparsions_subclonal_30_70.pdf"
 pdf(fn, width=8, height=4)
 par(mfrow=c(1,2))
-plot(mydata$true_obs_ccf1, mydata$ccube_double_ccf1, col = myColors[label1],
-     xlim = c(0, max( c(mydata$true_obs_ccf1, mydata$ccube_double_ccf1) ) ),
-     ylim = c(0, max( c(mydata$true_obs_ccf1, mydata$ccube_double_ccf1) ) ),
+plot(mydata$true_obs_ccf1, mydata$ccube_ccf1, col = myColors[label1],
+     xlim = c(0, max( c(mydata$true_obs_ccf1, mydata$ccube_ccf1) ) ),
+     ylim = c(0, max( c(mydata$true_obs_ccf1, mydata$ccube_ccf1) ) ),
      xlab = "true ccf", ylab = "estimated ccf", main = "double model: 1st break point")
-points( seq(0, max( c(mydata$true_obs_ccf1, mydata$ccube_double_ccf1) ), length.out = 100 ),
-        seq(0, max( c(mydata$true_obs_ccf1, mydata$ccube_double_ccf1) ), length.out = 100 ),
+points( seq(0, max( c(mydata$true_obs_ccf1, mydata$ccube_ccf1) ), length.out = 100 ),
+        seq(0, max( c(mydata$true_obs_ccf1, mydata$ccube_ccf1) ), length.out = 100 ),
         type = "l" )
 
-plot(mydata$true_obs_ccf2, mydata$ccube_double_ccf2, col = myColors[label1],
-     xlim = c(0, max( c(mydata$true_obs_ccf2, mydata$ccube_double_ccf2) ) ),
-     ylim = c(0, max( c(mydata$true_obs_ccf2, mydata$ccube_double_ccf2) ) ),
+plot(mydata$true_obs_ccf2, mydata$ccube_ccf2, col = myColors[label1],
+     xlim = c(0, max( c(mydata$true_obs_ccf2, mydata$ccube_ccf2) ) ),
+     ylim = c(0, max( c(mydata$true_obs_ccf2, mydata$ccube_ccf2) ) ),
      xlab = "true ccf", ylab = "estimated ccf", main = "double model: 2nd break point"
 )
 
-points( seq(0, max( c(mydata$true_obs_ccf2, mydata$ccube_double_ccf2) ), length.out = 100 ),
-        seq(0, max( c(mydata$true_obs_ccf2, mydata$ccube_double_ccf2) ), length.out = 100 ),
+points( seq(0, max( c(mydata$true_obs_ccf2, mydata$ccube_ccf2) ), length.out = 100 ),
+        seq(0, max( c(mydata$true_obs_ccf2, mydata$ccube_ccf2) ), length.out = 100 ),
         type = "l" )
 dev.off()
 
@@ -221,11 +162,10 @@ fn = "~/Desktop/cluster_ccf_times_multiplicity_comparsions_subclonal_30_70.pdf"
 pdf(fn, width=8, height=4)
 par(mfrow=c(1,2))
 
-mydata$ccube_ccf_mean <- doubleBreakPtsRes$res$full.model$ccfMean[doubleBreakPtsRes$res$label]
 mydata$true_cluster_ccf1_mult1 = mydata$ccf_true*mydata$true_mult1
 mydata$true_cluster_ccf2_mult2 = mydata$ccf_true*mydata$true_mult2
-mydata$ccube_cluster_ccf1_mult1 = mydata$ccube_ccf_mean*mydata$ccube_double_mult1
-mydata$ccube_cluster_ccf2_mult2 = mydata$ccube_ccf_mean*mydata$ccube_double_mult2
+mydata$ccube_cluster_ccf1_mult1 = mydata$ccube_ccf_mean*mydata$ccube_mult1
+mydata$ccube_cluster_ccf2_mult2 = mydata$ccube_ccf_mean*mydata$ccube_mult2
 
 
 plot(mydata$true_cluster_ccf1_mult1, mydata$ccube_cluster_ccf1_mult1, col = myColors[label1],
@@ -249,8 +189,8 @@ points( seq(0, max( c(mydata$true_cluster_ccf2_mult2, mydata$ccube_cluster_ccf2_
 dev.off()
 
 
-mydata$error_mult1 =  mydata$ccube_double_mult1 - mydata$true_mult1
-mydata$error_mult2 =  mydata$ccube_double_mult2 - mydata$true_mult2
+mydata$error_mult1 =  mydata$ccube_mult1 - mydata$true_mult1
+mydata$error_mult2 =  mydata$ccube_mult2 - mydata$true_mult2
 
 
 selectedData <- mydata[, c("mutation_id","ccube_ccf_mean", "error_mult1", "error_mult2", "true_mult1", "true_mult2", "total_cn1", "total_cn2")]

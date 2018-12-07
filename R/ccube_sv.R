@@ -28,7 +28,7 @@ CcubeSVCore <- function(mydata, epi=1e-3, init=2, prior, tol=1e-20, maxiter=1e3,
 
   dn1 <- mydata$ref_counts1 + mydata$var_counts1
   bn1 <- mydata$var_counts1
-  cn <- unique(mydata$normal_cn)
+  cn <- mydata$normal_cn
   cr1 <- mydata$total_cn1
   max_mult_cn1_sub1 <- mydata$major_cn1_sub1
   max_mult_cn1_sub2 <- mydata$major_cn1_sub2
@@ -163,10 +163,7 @@ GetCcf_sv <- function(mydata, use = c("use_base", "use_one")) {
     mydata <- dplyr::mutate(mydata, total_counts1 = ref_counts1 + var_counts1)
   }
 
-  if (!"total_cn1" %in% names(mydata)) {
-    mydata <- dplyr::mutate(mydata, total_cn1 = frac_cn1_sub1 * (major_cn1_sub1 + minor_cn1_sub1) +
-                              frac_cn1_sub2 * (major_cn1_sub2 + minor_cn1_sub2) )
-  }
+
 
   if (!"major_cn1" %in% names(mydata)) {
     mydata <- dplyr::mutate(mydata, major_cn1 = frac_cn1_sub1 * major_cn1_sub1 +
@@ -178,14 +175,14 @@ GetCcf_sv <- function(mydata, use = c("use_base", "use_one")) {
                               frac_cn1_sub2 * minor_cn1_sub2 )
   }
 
+  if (!"total_cn1" %in% names(mydata)) {
+    mydata <- dplyr::mutate(mydata, total_cn1 = major_cn1 + minor_cn1 )
+  }
+
   if (!"total_counts2" %in% names(mydata)) {
     mydata <- dplyr::mutate(mydata, total_counts1 = ref_counts2 + var_counts2)
   }
 
-  if (!"total_cn2" %in% names(mydata)) {
-    mydata <- dplyr::mutate(mydata, total_cn2 = frac_cn2_sub1 * (major_cn2_sub1 + minor_cn2_sub1) +
-                              frac_cn2_sub2 * (major_cn2_sub2 + minor_cn2_sub2))
-  }
 
   if (!"major_cn2" %in% names(mydata)) {
     mydata <- dplyr::mutate(mydata, major_cn2 = frac_cn2_sub1 * major_cn2_sub1 +
@@ -196,6 +193,12 @@ GetCcf_sv <- function(mydata, use = c("use_base", "use_one")) {
     mydata <- dplyr::mutate(mydata, minor_cn2 = frac_cn2_sub1 * minor_cn2_sub1 +
                               frac_cn2_sub2 * minor_cn2_sub2 )
   }
+
+  if (!"total_cn2" %in% names(mydata)) {
+    mydata <- dplyr::mutate(mydata, total_cn2 = major_cn2 + minor_cn2 )
+  }
+
+
   if (use=="use_base") {
     mydata <- dplyr::mutate(dplyr::rowwise(mydata),
                             ccf1_1 = MapVaf2CcfPyClone(var_counts1/total_counts1,
@@ -516,7 +519,7 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, max_mult_cn1_sub
         ccfMeanMat <- my_repmat(ccfMean, length(bvPool1))
         ccfCovMat <- my_repmat(ccfCov, length(bvPool1))
         respMat <- my_repmat(responsibility[ii, ], length(bvPool1))
-        w1 <- purity * (bvPool1Mat*(1-epi) -cr1[ii]*epi) / ((1-purity)*cn + purity * cr1[ii])
+        w1 <- purity * (bvPool1Mat*(1-epi) -cr1[ii]*epi) / ((1-purity)*cn[ii] + purity * cr1[ii])
         w1w1 <- w1^2
         ef1 <- w1 * ccfMeanMat +epi
         term1_breakpoint1 <- bn1[ii] * (log (ef1) - w1w1*ccfCovMat/(2 * ef1^2 ) )
@@ -575,7 +578,7 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, max_mult_cn1_sub
         qq1 <- rep(NA, length(bvPool1))
         for (jj in seq_along(bvPool1) ) {
 
-          w1 <- purity * (bvPool1[jj] *(1-epi) -cr1[ii]*epi) / ((1-purity)*cn + purity * cr1[ii])
+          w1 <- purity * (bvPool1[jj] *(1-epi) -cr1[ii]*epi) / ((1-purity)*cn[ii] + purity * cr1[ii])
           w1w1 <- w1^2
           ef1 <- w1 * ccfMean +epi
 
@@ -585,8 +588,13 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, max_mult_cn1_sub
 
           qq1[jj] <- sum ( responsibility[ii, ] *  (term1_breakpoint1 + term2_breakpoint1 + term3_breakpoint1)  )
         }
-        bv1[ii] <- bvPool1[which.max(qq1)]
 
+        maxQq1 <- which.max(qq1)
+        if ( length(maxQq1) == 0 ) {
+          bv1[ii] <- 1
+        } else {
+          bv1[ii] <- bvPool1[maxQq1]
+        }
       }
 
 
@@ -599,7 +607,7 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, max_mult_cn1_sub
         ccfMeanMat <- my_repmat(ccfMean, length(bvPool2))
         ccfCovMat <- my_repmat(ccfCov, length(bvPool2))
         respMat <- my_repmat(responsibility[ii, ], length(bvPool2))
-        w2 <- purity * (bvPool2Mat *(1-epi) -cr2[ii]*epi) / ((1-purity)*cn + purity * cr2[ii])
+        w2 <- purity * (bvPool2Mat *(1-epi) -cr2[ii]*epi) / ((1-purity)*cn[ii] + purity * cr2[ii])
         w2w2 <- w2^2
         ef2 <- w2 * ccfMeanMat +epi
         term1_breakpoint2 <- bn2[ii] * (log (ef2) - w2w2*ccfCovMat/(2 * ef2^2 ) )
@@ -657,7 +665,7 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, max_mult_cn1_sub
         qq2 <- rep(NA, length(bvPool2))
         for (jj in seq_along(bvPool2) ) {
 
-          w2 <- purity * (bvPool2[jj] *(1-epi) -cr2[ii]*epi) / ((1-purity)*cn + purity * cr2[ii])
+          w2 <- purity * (bvPool2[jj] *(1-epi) -cr2[ii]*epi) / ((1-purity)*cn[ii] + purity * cr2[ii])
           w2w2 <- w2^2
           ef2 <- w2 * ccfMean +epi
 
@@ -667,7 +675,13 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, max_mult_cn1_sub
 
           qq2[jj] <- sum ( responsibility[ii, ] *  (term1_breakpoint2 + term2_breakpoint2 + term3_breakpoint2)  )
         }
-        bv2[ii] <- bvPool2[which.max(qq2)]
+
+        maxQq2 <- which.max(qq2)
+        if ( length(maxQq2) == 0 ) {
+          bv2[ii] <- 1
+        } else {
+          bv2[ii] <- bvPoo2[maxQq2]
+        }
       }
 
     }
@@ -1170,7 +1184,7 @@ RemoveClusterAndReassignVariantsWithEstep_sv <- function(res, removeIdx, ssm = N
       res$full.model$dirichletConcentration <- res$full.model$dirichletConcentration0 + colSums(res$full.model$responsibility)
       res$full.model <- VarationalExpectationStep_sv(bn1 = ssm$var_counts1,
                                                      dn1 = ssm$ref_counts1 + ssm$var_counts1,
-                                                     cn = unique(ssm$normal_cn),
+                                                     cn = ssm$normal_cn,
                                                      cr1 = ssm$frac_cn1_sub1 * (ssm$major_cn1_sub1 + ssm$minor_cn1_sub1) +
                                                        ssm$frac_cn1_sub2 *(ssm$major_cn1_sub2 + ssm$minor_cn1_sub2),
                                                      bn2 = ssm$var_counts2,
@@ -1269,7 +1283,7 @@ RemoveClusterAndReassignVariantsWithEMsteps_sv <- function(res, removeIdx, ssm =
 
         res$full.model <- VarationalExpectationStep_sv(bn1 = ssm$var_counts1,
                                                        dn1 = ssm$ref_counts1 + ssm$var_counts1,
-                                                       cn = unique(ssm$normal_cn),
+                                                       cn = ssm$normal_cn,
                                                        cr1 = ssm$frac_cn1_sub1 * (ssm$major_cn1_sub1 + ssm$minor_cn1_sub1) +
                                                          ssm$frac_cn1_sub2 *(ssm$major_cn1_sub2 + ssm$minor_cn1_sub2),
                                                        bn2 = ssm$var_counts2,
@@ -1282,7 +1296,7 @@ RemoveClusterAndReassignVariantsWithEMsteps_sv <- function(res, removeIdx, ssm =
 
         res$full.model <- VariationalMaximimizationStep_sv(bn1 = ssm$var_counts1,
                                                         dn1 = ssm$ref_counts1 + ssm$var_counts1,
-                                                        cn = unique(ssm$normal_cn),
+                                                        cn = ssm$normal_cn,
                                                         cr1 = ssm$frac_cn1_sub1 * (ssm$major_cn1_sub1 + ssm$minor_cn1_sub1) +
                                                           ssm$frac_cn1_sub2 *(ssm$major_cn1_sub2 + ssm$minor_cn1_sub2),
                                                         max_mult_cn1_sub1 = ssm$major_cn1_sub1,
@@ -1306,7 +1320,7 @@ RemoveClusterAndReassignVariantsWithEMsteps_sv <- function(res, removeIdx, ssm =
 
         ll[vbiter] = VariationalLowerBound_sv(bn1 = ssm$var_counts1,
                                               dn1 = ssm$ref_counts1 + ssm$var_counts1,
-                                              cn = unique(ssm$normal_cn),
+                                              cn = ssm$normal_cn,
                                               cr1 = ssm$frac_cn1_sub1 * (ssm$major_cn1_sub1 + ssm$minor_cn1_sub1) +
                                                 ssm$frac_cn1_sub2 *(ssm$major_cn1_sub2 + ssm$minor_cn1_sub2),
                                               bn2 = ssm$var_counts2,

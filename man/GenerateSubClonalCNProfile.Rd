@@ -8,7 +8,19 @@ GenerateSubClonalCNProfile(cnPoolMaj, cnPoolMin, cnPoolMajFractions,
   cnPoolMinFractions, numVariants, subclonal, ccfCN)
 }
 \arguments{
-\item{cnPoolMaj}{of colors}
+\item{cnPoolMaj}{a pool of possible major copy numbers}
+
+\item{cnPoolMin}{a pool of possible minor copy numbers}
+
+\item{cnPoolMajFractions}{prevalence of possible major copy numbers}
+
+\item{cnPoolMinFractions}{prevalence of possible minor copy numbers}
+
+\item{numVariants}{number of variants}
+
+\item{subclonal}{a binary indicator of subclonal status, 1 for subclonal, 0 for clonal.}
+
+\item{ccfCN}{prevalence of the subclonal copy numbers}
 }
 \description{
 Simulate a 2-subclone subclonal copy number profile.
