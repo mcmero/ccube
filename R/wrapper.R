@@ -122,7 +122,7 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
     save(ssm, file = ccubeInputRDataFile)
   }
 
-  if (runAnalysis) {
+  if (runAnalysis | runAnalysisSnap) {
 
     if (is.null(ssm)) {
       if (!is.null(ccubeInputRDataFile) ) {
