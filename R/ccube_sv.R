@@ -60,7 +60,7 @@ CcubeSVCore <- function(mydata, epi=1e-3, init=2, prior, tol=1e-20, maxiter=1e3,
 
   X <- t(rawCcf) # Work with D by N for convenience
 
-  message(sprintf("Running VB-VB-Normal-Binomial on a %d-by-%d data with %d clusters ...\n", n, d, init))
+  message(sprintf("Running VB-Normal-Binomial on a %d-by-%d data with %d clusters ...\n", n, d, init))
 
   if(missing(prior)) {
 
@@ -530,14 +530,30 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, max_mult_cn1_sub
         maxQq1 <- which.max(qq1)
 
         if ( length(maxQq1) == 0 ) {
+
           if (frac_cn1_sub1[ii] >= frac_cn1_sub2[ii]) {
-            bv1[ii] <- frac_cn1_sub1[ii]
-            bv1_sub1[ii] = 1
-            bv1_sub2[ii] = 0
+
+            if (max_mult_cn1_sub1[ii] > 0) {
+              bv1[ii] <- frac_cn1_sub1[ii]
+              bv1_sub1[ii] = 1
+              bv1_sub2[ii] = 0
+            } else {
+              bv1[ii] <- frac_cn1_sub2[ii]
+              bv1_sub1[ii] = 0
+              bv1_sub2[ii] = 1
+            }
+
           } else {
-            bv1[ii] <- frac_cn1_sub2[ii]
-            bv1_sub1[ii] = 0
-            bv1_sub2[ii] = 1
+            if (max_mult_cn1_sub2[ii] > 0) {
+              bv1[ii] <- frac_cn1_sub2[ii]
+              bv1_sub1[ii] = 0
+              bv1_sub2[ii] = 1
+            } else {
+              bv1[ii] <- frac_cn1_sub1[ii]
+              bv1_sub1[ii] = 1
+              bv1_sub2[ii] = 0
+            }
+
           }
         } else {
           bv1[ii] <- bvPool1[maxQq1]
@@ -618,13 +634,29 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, max_mult_cn1_sub
         maxQq2 <- which.max(qq2)
         if ( length(maxQq2) == 0 ) {
           if (frac_cn2_sub1[ii] >= frac_cn2_sub2[ii]) {
-            bv2[ii] <- frac_cn2_sub1[ii]
-            bv2_sub1[ii] = 1
-            bv2_sub2[ii] = 0
+
+            if (max_mult_cn2_sub1[ii] > 0) {
+              bv2[ii] <- frac_cn2_sub1[ii]
+              bv2_sub1[ii] = 1
+              bv2_sub2[ii] = 0
+            } else {
+              bv2[ii] <- frac_cn2_sub2[ii]
+              bv2_sub1[ii] = 0
+              bv2_sub2[ii] = 1
+            }
+
           } else {
-            bv2[ii] <- frac_cn2_sub2[ii]
-            bv2_sub1[ii] = 0
-            bv2_sub2[ii] = 1
+
+            if (max_mult_cn2_sub2[ii] > 0) {
+              bv2[ii] <- frac_cn2_sub2[ii]
+              bv2_sub1[ii] = 0
+              bv2_sub2[ii] = 1
+            } else {
+              bv2[ii] <- frac_cn2_sub1[ii]
+              bv2_sub1[ii] = 1
+              bv2_sub2[ii] = 0
+            }
+
           }
         } else {
           bv2[ii] <- bvPool2[maxQq2]
@@ -680,7 +712,7 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, max_mult_cn1_sub
         if ( length(maxQq2) == 0 ) {
           bv2[ii] <- 1
         } else {
-          bv2[ii] <- bvPoo2[maxQq2]
+          bv2[ii] <- bvPool2[maxQq2]
         }
       }
 
@@ -1196,9 +1228,15 @@ RemoveClusterAndReassignVariantsWithEstep_sv <- function(res, removeIdx, ssm = N
                                                      model = res$full.model)
 
       res$full.model <- SortClusters(res$full.model)
-
       res$label <- apply(res$full.model$responsibility, 1, which.max)
+
+      # if (is.null(dim(res$full.model$responsibility)) ) {
+      #   res$label <- rep(1, length(res$full.model$responsibility))
+      # } else {
+      #   res$label <- apply(res$full.model$responsibility, 1, which.max)
+      # }
       res$full.model$dirichletConcentration <- res$full.model$dirichletConcentration0 + colSums(res$full.model$responsibility)
+
     }
 
 
@@ -1210,10 +1248,20 @@ RemoveClusterAndReassignVariantsWithEstep_sv <- function(res, removeIdx, ssm = N
     if (!is.null(res$mu)) {
       res$mu=res$full.model$ccfMean
     }
+
     if (! is.null(res$full.model$Epi)) {
+
       Epi <- (res$full.model$dirichletConcentration + colSums(res$full.model$responsibility)) /
         (length(res$full.model$ccfMean) * res$full.model$dirichletConcentration0 + length(res$label))
       res$full.model$Epi <- Epi/sum(Epi)
+
+      # if (is.null(dim(res$full.model$responsibility)) ) {
+      #   res$full.model$Epi <- 1
+      # } else {
+      #   Epi <- (res$full.model$dirichletConcentration + colSums(res$full.model$responsibility)) /
+      #     (length(res$full.model$ccfMean) * res$full.model$dirichletConcentration0 + length(res$label))
+      #   res$full.model$Epi <- Epi/sum(Epi)
+      # }
     }
 
   }
@@ -1329,7 +1377,7 @@ RemoveClusterAndReassignVariantsWithEMsteps_sv <- function(res, removeIdx, ssm =
                                                 ssm$frac_cn2_sub2 *(ssm$major_cn2_sub2 + ssm$minor_cn2_sub2),
                                               epi = epi,
                                               purity = unique(ssm$purity),
-                                              model = res$full.model)/n
+                                              model = res$full.model)/length(res$label)
         converged <- abs(ll[vbiter] - ll[vbiter-1]) < (tol * abs(ll[vbiter]))
         degenerated <- (ll[vbiter] - ll[vbiter-1]) < 0
         if(verbose) cat(sprintf("\rVB-EM-%d: L = %.8f \r", vbiter, ll[vbiter]))
@@ -1337,12 +1385,13 @@ RemoveClusterAndReassignVariantsWithEMsteps_sv <- function(res, removeIdx, ssm =
 
 
       res$full.model <- SortClusters(res$full.model)
+      res$label <- apply(res$full.model$responsibility, 1, which.max)
 
-      if (is.null(dim(res$full.model$responsibility)) ) {
-        res$label <- rep(1, length(res$full.model$responsibility))
-      } else {
-        res$label <- apply(res$full.model$responsibility, 1, which.max)
-      }
+      # if (is.null(dim(res$full.model$responsibility)) ) {
+      #   res$label <- rep(1, length(res$full.model$responsibility))
+      # } else {
+      #   res$label <- apply(res$full.model$responsibility, 1, which.max)
+      # }
     }
 
 
@@ -1355,13 +1404,16 @@ RemoveClusterAndReassignVariantsWithEMsteps_sv <- function(res, removeIdx, ssm =
       res$mu=res$full.model$ccfMean
     }
     if (! is.null(res$full.model$Epi)) {
-      if (is.null(dim(res$full.model$responsibility)) ) {
-        res$full.model$Epi <- 1
-      } else {
-        Epi <- (res$full.model$dirichletConcentration + colSums(res$full.model$responsibility)) /
-          (length(res$full.model$ccfMean) * res$full.model$dirichletConcentration0 + length(res$label))
-        res$full.model$Epi <- Epi/sum(Epi)
-      }
+      Epi <- (res$full.model$dirichletConcentration + colSums(res$full.model$responsibility)) /
+        (length(res$full.model$ccfMean) * res$full.model$dirichletConcentration0 + length(res$label))
+      res$full.model$Epi <- Epi/sum(Epi)
+      # if (is.null(dim(res$full.model$responsibility)) ) {
+      #   res$full.model$Epi <- 1
+      # } else {
+      #   Epi <- (res$full.model$dirichletConcentration + colSums(res$full.model$responsibility)) /
+      #     (length(res$full.model$ccfMean) * res$full.model$dirichletConcentration0 + length(res$label))
+      #   res$full.model$Epi <- Epi/sum(Epi)
+      # }
     }
 
   }
