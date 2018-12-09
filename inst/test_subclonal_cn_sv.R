@@ -104,7 +104,6 @@ mydata$subclonal_cn2 = subclonal_cn2
 doubleBreakPtsRes <- RunCcubePipeline(ssm = mydata, modelSV = T,
                                       numOfClusterPool = numOfClusterPool, numOfRepeat = numOfRepeat,
                                       runAnalysis = T, runQC = T,
-                                      ccubeResultRDataFile = "~/Dropbox/for_marek/ccube_sv_subclonal_results.RData", multiCore = T,
                                       basicFormats = F, allFormats = F, returnAll = T)
 
 
