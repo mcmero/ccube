@@ -397,3 +397,13 @@ GenerateSubClonalCNProfile <- function(cnPoolMaj, cnPoolMin,
   return(cnProfile)
 }
 
+python_false_true_converter <- function(x) {
+  if (x == "False") {
+    x = FALSE
+  }
+
+  if (x == "True") {
+    x = TRUE
+  }
+  x
+}

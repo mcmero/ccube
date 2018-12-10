@@ -5,11 +5,12 @@ library(doParallel)
 library(ggplot2)
 library(tidyr)
 library(gridExtra)
+options(stringsAsFactors = F)
 
 registerDoParallel(cores=3)
 set.seed(1234)
 
-numOfClusterPool = 20
+numOfClusterPool = 1:7
 numOfRepeat = 1
 
 
@@ -32,7 +33,7 @@ for (ii in seq_along(sampleNames)) {
 }
 
 
-allDebugFolder <- "~/debug_pcawg_samples_sv/debuged_samples_all"
+allDebugFolder <- "~/debug_pcawg_samples_sv/debuged_samples_all_full_run_low_iter_test"
 
 if (! dir.exists(allDebugFolder) ) {
   dir.create(allDebugFolder)
@@ -41,7 +42,7 @@ if (! dir.exists(allDebugFolder) ) {
 
 singleEventSamples <- c()
 problemSamples <- c()
-for (ii in seq_along(bugSamples)) {
+for (ii in seq_along(sampleNames)) {
 
   cat(ii, "\n")
 
@@ -57,6 +58,10 @@ for (ii in seq_along(bugSamples)) {
 
   mydata <- try( read.delim(inputFn), T)
 
+
+
+
+
   if ( is.data.frame(mydata) ) {
 
     if (nrow(mydata) == 1) {
@@ -66,17 +71,22 @@ for (ii in seq_along(bugSamples)) {
 
     ccubeRes <- try(
       RunCcubePipeline(ssm = mydata, modelSV = T,
-                                   numOfClusterPool = numOfClusterPool,
-                                   numOfRepeat = numOfRepeat, multiCore =T,
-                                   runAnalysisSnap = T, runQC = T, returnAll = T),
+                       numOfClusterPool = numOfClusterPool,
+                       numOfRepeat = numOfRepeat, multiCore =T,
+                       runAnalysis = T, runQC = T, returnAll = T,
+                       maxiter = 20),
       T
     )
 
     if (is.list (ccubeRes) ) {
       fn = paste0(resultsFolder, "/ccube_sv_results.RDdata")
       save(ccubeRes, file = fn)
-      fn = paste0(resultsFolder, "/ccube_sv_results.pdf")
-      MakeCcubeStdPlot_sv(res = ccubeRes$res, ssm = ccubeRes$ssm, printPlot = T, fn = fn)
+
+      if (nrow(mydata) > 1) {
+        fn = paste0(resultsFolder, "/ccube_sv_results.pdf")
+        MakeCcubeStdPlot_sv(res = ccubeRes$res, ssm = ccubeRes$ssm, printPlot = T, fn = fn)
+      }
+
     } else {
       cat(ccubeRes, file = paste0(resultsFolder, "/bug_info_ccube.txt"))
 

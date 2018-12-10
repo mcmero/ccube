@@ -6,11 +6,13 @@ library(ggplot2)
 library(tidyr)
 library(gridExtra)
 
+options(stringsAsFactors = F)
+
 registerDoParallel(cores=3)
 set.seed(1234)
 
 
-numOfClusterPool = 20
+numOfClusterPool = 1:7
 numOfRepeat = 1
 
 
@@ -34,9 +36,11 @@ for (ii in seq_along(sampleNames)) {
 
 
 allDebugFolder <- "~/debug_pcawg_samples_sv/debuged_samples"
+problemSamples <- c("0b6cd7df-6970-4d60-b7b5-85002a7d8781",
+                    "f601cf2f-081f-484d-ab0e-21a8ec8d3770",
+                    "fab0be4b-c84a-45cd-a76f-44d9a8bf1846")
 
-
-  ii = which(bugSamples == "008aef39-0c97-48ce-9dfd-f12d67116c59")
+  ii = which(bugSamples == "fab0be4b-c84a-45cd-a76f-44d9a8bf1846")
   cat(ii, "\n")
 
   sampleName <- bugSamples[ii]
@@ -81,7 +85,7 @@ allDebugFolder <- "~/debug_pcawg_samples_sv/debuged_samples"
       RunCcubePipeline(ssm = mydata, modelSV = T,
                                    numOfClusterPool = numOfClusterPool,
                                    numOfRepeat = numOfRepeat, multiCore =T,
-                                   runAnalysisSnap = T, runQC = T, returnAll = T)
+                                   runAnalysis = T, runQC = T, returnAll = T, maxiter = 20)
 
     if (is.list (ccubeRes) ) {
       fn = paste0(resultsFolder, "/ccube_sv_results.RDdata")

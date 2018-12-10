@@ -22,6 +22,7 @@
 #' @param ssm Ccube input data
 #' @param returnAll return results to the current R session
 #' @param maxSnv maximum number of SNVs. Used in runParser mode
+#' @param use option for rough estimator for ccf
 #' @return If returnAll flag is up, returns a list including the prefered solution, res; annotated ssm, ssm; a list of all solutions, results; trace of ELBOs
 #' @export
 RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder = NULL, makeFolders = F,
@@ -35,7 +36,7 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
                              multiCore = F, ccubeInputRDataFile = NULL,
                              ccubeResultRDataFile = NULL,
                              ssm = NULL, returnAll = F,
-                             maxSnv = 1e7){
+                             maxSnv = 1e7, use = "use_base"){
 
   # stopifnot( runParser | runAnalysis | runAnalysisSnap,
   #            runParser & !is.null(variantCaller) & !is.null(cnaCaller),
@@ -132,6 +133,24 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
       }
     }
 
+
+    if (modelSV) {
+      ssm <- dplyr::mutate( dplyr::rowwise(ssm),
+                           subclonal_cn1 = python_false_true_converter(subclonal_cn1),
+                           subclonal_cn2 = python_false_true_converter(subclonal_cn2))
+      ssm <- GetCcf_sv(ssm,  use=use)
+    } else {
+      ssm <- dplyr::mutate( dplyr::rowwise(ssm),
+                           subclonal_cn = python_false_true_converter(subclonal_cn))
+      ssm <- GetCcf(ssm,  use=use)
+    }
+
+    if (nrow(ssm) == 1) {
+
+      message(sprintf("Only one variant in the sample! \n Exit without clustering \n Return a rough estimate. "))
+
+      return(ssm)
+    }
 
 
     # filtering
@@ -273,13 +292,7 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
       ssm$ccube_mult1 <- res$full.model$bv1
       ssm$ccube_mult2 <- res$full.model$bv2
 
-      ssm$total_cn1 <- ssm$frac_cn1_sub1 * (ssm$major_cn1_sub1 + ssm$minor_cn1_sub1) +
-        ssm$frac_cn1_sub2 * (ssm$major_cn1_sub2 + ssm$minor_cn1_sub2)
-      ssm$total_cn2 <- ssm$frac_cn2_sub1 * (ssm$major_cn2_sub1 + ssm$minor_cn2_sub1) +
-        ssm$frac_cn2_sub2 * (ssm$major_cn2_sub2 + ssm$minor_cn2_sub2)
-
-      ssm <- dplyr::mutate(rowwise(ssm),
-                    vaf1 = var_counts1/(var_counts1+ref_counts1),
+      ssm <- dplyr::mutate( dplyr::rowwise(ssm),
                     ccube_ccf1 = MapVaf2CcfPyClone(vaf1,
                                                    purity,
                                                    normal_cn,
@@ -287,7 +300,6 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
                                                    total_cn1,
                                                    ccube_mult1,
                                                    constraint=F),
-                    vaf2 = var_counts2/(var_counts2+ref_counts2),
                     ccube_ccf2 = MapVaf2CcfPyClone(vaf2,
                                                    purity,
                                                    normal_cn,
@@ -302,11 +314,7 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
       ssm$ccube_ccf_mean <- res$full.model$ccfMean[res$label]
       ssm$ccube_mult <- res$full.model$bv
 
-      ssm$total_cn <- ssm$frac_cn_sub1 * (ssm$major_cn_sub1 + ssm$minor_cn_sub1) +
-        ssm$frac_cn_sub2 * (ssm$major_cn_sub2 + ssm$minor_cn_sub2)
-
-      ssm <- dplyr::mutate(rowwise(ssm),
-                    vaf = var_counts/(var_counts+ref_counts),
+      ssm <- dplyr::mutate( dplyr::rowwise(ssm),
                     ccube_ccf = MapVaf2CcfPyClone(vaf,
                                                   purity,
                                                   normal_cn,
@@ -327,7 +335,8 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
                    "/ccube_res.RData")
     }
 
-    save(ssm, results, res, lb, file = fn)
+    ccubeRes <- list(res = res, results = results, ssm = ssm, lb = lb)
+    save(ccubeRes, file = fn)
 
 
     if (modelSV) {
@@ -351,11 +360,5 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
 
   }
 
-
-  if (returnAll) {
-
-    return(list(res = res, results = results, ssm = ssm, lb = lb))
-
-  }
-
+  return(list(res = res, results = results, ssm = ssm, lb = lb))
 }

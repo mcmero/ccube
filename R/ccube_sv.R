@@ -26,7 +26,7 @@ CcubeSVCore <- function(mydata, epi=1e-3, init=2, prior, tol=1e-20, maxiter=1e3,
 
   mydata <- GetCcf_sv(mydata, use=use)
 
-  dn1 <- mydata$ref_counts1 + mydata$var_counts1
+  dn1 <- mydata$total_counts1
   bn1 <- mydata$var_counts1
   cn <- mydata$normal_cn
   cr1 <- mydata$total_cn1
@@ -34,18 +34,18 @@ CcubeSVCore <- function(mydata, epi=1e-3, init=2, prior, tol=1e-20, maxiter=1e3,
   max_mult_cn1_sub2 <- mydata$major_cn1_sub2
   frac_cn1_sub1 <- mydata$frac_cn1_sub1
   frac_cn1_sub2 <- mydata$frac_cn1_sub2
-  bv1 <- mydata$mult1
+  bv1 <- mydata$rough_mult1
   bv1_sub1 <- rep(-100, length(max_mult_cn1_sub1))
   bv1_sub2 <- rep(-100, length(max_mult_cn1_sub2))
 
-  dn2 <- mydata$ref_counts2 + mydata$var_counts2
+  dn2 <- mydata$total_counts2
   bn2 <- mydata$var_counts2
   cr2 <- mydata$total_cn2
   max_mult_cn2_sub1 <- mydata$major_cn2_sub1
   max_mult_cn2_sub2 <- mydata$major_cn2_sub2
   frac_cn2_sub1 <- mydata$frac_cn2_sub1
   frac_cn2_sub2 <- mydata$frac_cn2_sub2
-  bv2 <- mydata$mult2
+  bv2 <- mydata$rough_mult2
   bv2_sub1 <- rep(-100, length(max_mult_cn2_sub1))
   bv2_sub2 <- rep(-100, length(max_mult_cn2_sub2))
 
@@ -53,7 +53,7 @@ CcubeSVCore <- function(mydata, epi=1e-3, init=2, prior, tol=1e-20, maxiter=1e3,
   subclonal_cn2 <- mydata$subclonal_cn2
 
   purity <- unique(mydata$purity)
-  rawCcf <- mydata$ccf
+  rawCcf <- mydata$rough_ccf
   rawCcf <- as.matrix(rawCcf)
   n <- nrow(rawCcf)
   d <- ncol(rawCcf)
@@ -155,6 +155,14 @@ CcubeSVCore <- function(mydata, epi=1e-3, init=2, prior, tol=1e-20, maxiter=1e3,
 #' @return mydata mutation data frame
 #' @export
 GetCcf_sv <- function(mydata, use = c("use_base", "use_one")) {
+
+
+  if ("rough_ccf" %in% names(mydata) &
+      "rough_mult1" %in% names(mydata) &
+      "rough_mult2" %in% names(mydata)){
+    return(mydata)
+  }
+
   GetMult <- function(x, y, z) {
     index <- which(x==z)
     mean(y[index])
@@ -162,8 +170,6 @@ GetCcf_sv <- function(mydata, use = c("use_base", "use_one")) {
   if (!"total_counts1" %in% names(mydata)) {
     mydata <- dplyr::mutate(mydata, total_counts1 = ref_counts1 + var_counts1)
   }
-
-
 
   if (!"major_cn1" %in% names(mydata)) {
     mydata <- dplyr::mutate(mydata, major_cn1 = frac_cn1_sub1 * major_cn1_sub1 +
@@ -183,6 +189,9 @@ GetCcf_sv <- function(mydata, use = c("use_base", "use_one")) {
     mydata <- dplyr::mutate(mydata, total_counts1 = ref_counts2 + var_counts2)
   }
 
+  if (!"vaf1" %in% names(mydata)) {
+    mydata <- dplyr::mutate(mydata, vaf1 = var_counts1/total_counts1)
+  }
 
   if (!"major_cn2" %in% names(mydata)) {
     mydata <- dplyr::mutate(mydata, major_cn2 = frac_cn2_sub1 * major_cn2_sub1 +
@@ -198,40 +207,44 @@ GetCcf_sv <- function(mydata, use = c("use_base", "use_one")) {
     mydata <- dplyr::mutate(mydata, total_cn2 = major_cn2 + minor_cn2 )
   }
 
+  if (!"vaf2" %in% names(mydata)) {
+    mydata <- dplyr::mutate(mydata, vaf2 = var_counts2/total_counts2)
+  }
+
 
   if (use=="use_base") {
     mydata <- dplyr::mutate(dplyr::rowwise(mydata),
-                            ccf1_1 = MapVaf2CcfPyClone(var_counts1/total_counts1,
+                            ccf1_1 = MapVaf2CcfPyClone(vaf1,
                                                      purity,
                                                      normal_cn,
                                                      total_cn1,
                                                      total_cn1,
                                                      major_cn1, lower = 0, upper = 2),
-                            ccf1_2 = MapVaf2CcfPyClone(var_counts1/total_counts1,
+                            ccf1_2 = MapVaf2CcfPyClone(vaf1,
                                                      purity,
                                                      normal_cn,
                                                      total_cn1,
                                                      total_cn1,
                                                      minor_cn1, lower = 0, upper = 2),
-                            ccf1_3 = MapVaf2CcfPyClone(var_counts1/total_counts1,
+                            ccf1_3 = MapVaf2CcfPyClone(vaf1,
                                                      purity,
                                                      normal_cn,
                                                      total_cn1,
                                                      total_cn1,
                                                      1, lower = 0, upper = 2),
-                            ccf2_1 = MapVaf2CcfPyClone(var_counts2/total_counts2,
+                            ccf2_1 = MapVaf2CcfPyClone(vaf2,
                                                        purity,
                                                        normal_cn,
                                                        total_cn2,
                                                        total_cn2,
                                                        major_cn2, lower = 0, upper = 2),
-                            ccf2_2 = MapVaf2CcfPyClone(var_counts2/total_counts2,
+                            ccf2_2 = MapVaf2CcfPyClone(vaf2,
                                                        purity,
                                                        normal_cn,
                                                        total_cn2,
                                                        total_cn2,
                                                        minor_cn2, lower = 0, upper = 2),
-                            ccf2_3 = MapVaf2CcfPyClone(var_counts2/total_counts2,
+                            ccf2_3 = MapVaf2CcfPyClone(vaf2,
                                                        purity,
                                                        normal_cn,
                                                        total_cn2,
@@ -258,15 +271,15 @@ GetCcf_sv <- function(mydata, use = c("use_base", "use_one")) {
 
 
     mydata <- dplyr::mutate(dplyr::rowwise(mydata),
-                            mult1 = GetMult(c(ccf1_1, ccf1_2, ccf1_3),
+                            rough_mult1 = GetMult(c(ccf1_1, ccf1_2, ccf1_3),
                                            c(major_cn1, minor_cn1, 1), ccf1),
-                            mult2 = GetMult(c(ccf2_1, ccf2_2, ccf2_3),
+                            rough_mult2 = GetMult(c(ccf2_1, ccf2_2, ccf2_3),
                                             c(major_cn2, minor_cn2, 1), ccf2) )
 
     dd1 <- dplyr::filter(mydata, is.na(ccf1))
     if (nrow(dd1) > 0) {
       dd1 <- dplyr::mutate(dplyr::rowwise(dd1),
-                           ccf1 = MapVaf2CcfPyClone(var_counts1/total_counts1,
+                           ccf1 = MapVaf2CcfPyClone(vaf1,
                                                    purity,
                                                    normal_cn,
                                                    total_cn1,
@@ -275,13 +288,13 @@ GetCcf_sv <- function(mydata, use = c("use_base", "use_one")) {
 
 
       mydata[mydata$mutation_id %in% dd1$mutation_id,]$ccf1 = dd1$ccf1
-      mydata[mydata$mutation_id %in% dd1$mutation_id,]$mult1 = 1
+      mydata[mydata$mutation_id %in% dd1$mutation_id,]$rough_mult1 = 1
     }
 
     dd1 <- dplyr::filter(mydata, is.na(ccf2))
     if (nrow(dd1) > 0) {
       dd1 <- dplyr::mutate(dplyr::rowwise(dd1),
-                           ccf2 = MapVaf2CcfPyClone(var_counts2/total_counts2,
+                           ccf2 = MapVaf2CcfPyClone(vaf2,
                                                     purity,
                                                     normal_cn,
                                                     total_cn2,
@@ -290,22 +303,22 @@ GetCcf_sv <- function(mydata, use = c("use_base", "use_one")) {
 
 
       mydata[mydata$mutation_id %in% dd1$mutation_id,]$ccf2 = dd1$ccf2
-      mydata[mydata$mutation_id %in% dd1$mutation_id,]$mult2 = 1
+      mydata[mydata$mutation_id %in% dd1$mutation_id,]$rough_mult2 = 1
     }
 
   }
 
   if (use == "use_one") {
-    mydata$mult1 = 1
-    mydata$mult2 = 1
+    mydata$rough_mult1 = 1
+    mydata$rough_mult2 = 1
     mydata <- dplyr::mutate(dplyr::rowwise(mydata),
-                         ccf1 = MapVaf2CcfPyClone(var_counts1/total_counts1,
+                         ccf1 = MapVaf2CcfPyClone(vaf1,
                                                  purity,
                                                  normal_cn,
                                                  total_cn1,
                                                  total_cn1,
                                                  1, constraint = F),
-                         ccf2 = MapVaf2CcfPyClone(var_counts2/total_counts2,
+                         ccf2 = MapVaf2CcfPyClone(vaf2,
                                                   purity,
                                                   normal_cn,
                                                   total_cn2,
@@ -313,7 +326,16 @@ GetCcf_sv <- function(mydata, use = c("use_base", "use_one")) {
                                                   1, constraint = F))
   }
 
- mydata <- dplyr::mutate(dplyr::rowwise(mydata), ccf = mean( ccf1, ccf2 ) )
+ mydata <- dplyr::mutate(dplyr::rowwise(mydata), rough_ccf = mean( ccf1, ccf2 ) )
+ mydata$ccf1 <- NULL
+ mydata$ccf2 <- NULL
+ mydata$ccf1_1 <- NULL
+ mydata$ccf1_2 <- NULL
+ mydata$ccf1_3 <- NULL
+ mydata$ccf2_1 <- NULL
+ mydata$ccf2_2 <- NULL
+ mydata$ccf2_3 <- NULL
+
  return(mydata)
 }
 
@@ -1450,7 +1472,7 @@ MergeClusters_sv <- function(res = res, ssm = ssm, tol = 1e-8, maxiter = 100, ep
   idx <- dplyr::rename(idx, col_weights = Freq)
   idx <- dplyr::left_join(idx, clusterWeights, by = c("row"="Var1"))
   idx <- dplyr::rename(idx, row_weights = Freq)
-  idx <- dplyr::mutate(rowwise(idx), remove_idx = c(row, col)[which.min(c(row_weights, col_weights))] )
+  idx <- dplyr::mutate(dplyr::rowwise(idx), remove_idx = c(row, col)[which.min(c(row_weights, col_weights))] )
   removeIdx <- unique(idx$remove_idx)
   res$mergeCluster <- length(removeIdx)>0
   return(RemoveClusterAndReassignVariantsWithEMsteps_sv(res = res,

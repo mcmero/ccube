@@ -13,7 +13,7 @@ RunCcubePipeline(sampleName = NULL, dataFolder = NULL,
   numOfClusterPool = NULL, numOfRepeat = NULL, epi = 0.001,
   tol = 1e-08, maxiter = 1000, multiCore = F,
   ccubeInputRDataFile = NULL, ccubeResultRDataFile = NULL,
-  ssm = NULL, returnAll = F, maxSnv = 1e+07)
+  ssm = NULL, returnAll = F, maxSnv = 1e+07, use = "use_base")
 }
 \arguments{
 \item{sampleName}{sample name}
@@ -61,6 +61,8 @@ RunCcubePipeline(sampleName = NULL, dataFolder = NULL,
 \item{returnAll}{return results to the current R session}
 
 \item{maxSnv}{maximum number of SNVs. Used in runParser mode}
+
+\item{use}{option for rough estimator for ccf}
 }
 \value{
 If returnAll flag is up, returns a list including the prefered solution, res; annotated ssm, ssm; a list of all solutions, results; trace of ELBOs
