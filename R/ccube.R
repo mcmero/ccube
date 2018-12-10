@@ -40,7 +40,7 @@ SortClusters <- function(model) {
   model
 }
 
-#' Run Ccube with model 6: Normal-Binomial
+#' Run Ccube with model 6: Normal-Binomial. TODO: to be removed in the final release
 #' @param mydata mutation data frame
 #' @param epi sequencing error
 #' @param init scalar number of clusters, or vector all possible cluster numbers
@@ -190,7 +190,6 @@ CcubeCore <- function(mydata, epi=1e-3, init=2, prior, tol=1e-20, maxiter=1e3, f
   subclonal_cn <- mydata$subclonal_cn
 
   purity <- unique(mydata$purity)
-  bv <- mydata$mult
   rawCcf <- mydata$rough_ccf
   rawCcf <- as.matrix(rawCcf)
   n <- nrow(rawCcf)
@@ -349,9 +348,9 @@ GetCcf <- function(mydata, use = c("use_base", "use_one")) {
 
     mydata <- dplyr::mutate(dplyr::rowwise(mydata),
                             rough_mult = GetMult(c(ccf1, ccf2, ccf3),
-                                           c(major_cn, minor_cn, 1), ccf))
+                                           c(major_cn, minor_cn, 1), rough_ccf))
 
-    dd1 <- dplyr::filter(mydata, is.na(ccf))
+    dd1 <- dplyr::filter(mydata, is.na(rough_ccf))
     if (nrow(dd1) > 0) {
       dd1 <- dplyr::mutate(dplyr::rowwise(dd1),
                            rough_ccf = MapVaf2CcfPyClone(vaf,
@@ -544,9 +543,9 @@ VariationalMaximimizationStep <- function(bn, dn, cn, cr, max_mult_cn_sub1, max_
 
           }
         } else {
-          bv[ii] <- bvPool[maxQq1]
-          bv_sub1[ii] <- sub_cn_mults$X[maxQq1]
-          bv_sub2[ii] <- sub_cn_mults$Y[maxQq1]
+          bv[ii] <- bvPool[maxQq]
+          bv_sub1[ii] <- sub_cn_mults$X[maxQq]
+          bv_sub2[ii] <- sub_cn_mults$Y[maxQq]
         }
 
         # Todo: remove

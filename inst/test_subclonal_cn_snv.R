@@ -54,21 +54,25 @@ mydata <- mutate(rowwise(mydata),
                    },
                  true_mult = frac_cn_sub1 * true_mult_sub1 + frac_cn_sub2 * true_mult_sub2,
                  total_cn = frac_cn_sub1 * total_cn_sub1 + frac_cn_sub2 * total_cn_sub2,
-                 vaf = cp2ap(ccf_true, purity, normal_cn,
+                 true_vaf = cp2ap(ccf_true, purity, normal_cn,
                               total_cn,
                               total_cn,
                               true_mult),
                  total_counts = rpois(1, total_cn/2 * baseDepth),
-                 var_counts = rbinom(1, total_counts, vaf),
+                 var_counts = rbinom(1, total_counts, true_vaf),
                  ref_counts = total_counts - var_counts)
+
+#
+# mydata <- read.delim("~/Downloads/001bM_p0.1_001gM_p0.9_ccube_snv_input.txt",
+#                      stringsAsFactors = F)
+
 
 
 ccubeRes <- RunCcubePipeline(ssm = mydata, numOfClusterPool = numOfClusterPool, numOfRepeat = numOfRepeat,
-                             runAnalysis = T, runQC = T, multiCore = T,
-                             basicFormats = F, allFormats = F, returnAll = T)
+                             runAnalysis = T, runQC = T, multiCore = T)
 
 
-fn1 = "~/Desktop/snv_subclonal_results.pdf"
+fn1 = "~/Desktop/snv_subclonal_001_test.pdf"
 MakeCcubeStdPlot(res = ccubeRes$res, ssm = ccubeRes$ssm, printPlot = T, fn = fn1)
 
 mydata = ccubeRes$ssm
