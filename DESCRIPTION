@@ -3,10 +3,10 @@ Type: Package
 Title: ccube
 Date: 2016-03-14
 Version: 0.0.0.9000
-Authors@R: person("Ke", "Yuan", email = "ke.yuan@gmail.com",
+Authors@R: person("Ke", "Yuan", email = "ke.yuan@glasgow.ac.uk",
     role = c("aut", "cre"))
-Maintainer: Ke Yuan <ke.yuan.09@gmail.com>
-Description: R functions for clustering cancer cell fractions.
+Maintainer: Ke Yuan <ke.yuan@glasgow.ac.uk>
+Description: A R package for estimating cancer cell fractions via clustering.
 License: GPL-3
 LazyData: TRUE
 Depends:
@@ -16,7 +16,8 @@ Imports:
     Matrix,
     pracma,
     dplyr,
-    monomvn
+    monomvn,
+    foreach
 RoxygenNote: 6.1.0
 Collate: 
     'ccube.R'

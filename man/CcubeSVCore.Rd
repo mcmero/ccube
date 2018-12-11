@@ -6,7 +6,7 @@
 \usage{
 CcubeSVCore(mydata, epi = 0.001, init = 2, prior, tol = 1e-20,
   maxiter = 1000, fit_mult = F, fit_hyper = T, use = c("use_base",
-  "use_one"), verbose = FALSE)
+  "use_one"), verbose = T)
 }
 \arguments{
 \item{mydata}{mutation data frame}

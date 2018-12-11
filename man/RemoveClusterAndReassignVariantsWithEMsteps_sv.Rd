@@ -24,6 +24,10 @@ RemoveClusterAndReassignVariantsWithEMsteps_sv(res, removeIdx,
 \item{epi}{sequencing error}
 
 \item{verbose}{show progress}
+
+\item{fit_mult}{flag to estimate multiplicities}
+
+\item{fit_hyper}{flag to estimate hyperparameters}
 }
 \value{
 Ccube result list

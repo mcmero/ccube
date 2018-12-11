@@ -346,3 +346,64 @@ gg_color_hue <- function(n) {
   hues = seq(15, 375, length=n+1)
   hcl(h=hues, l=65, c=100)[1:n]
 }
+
+
+#' Simulate a clonal copy number profile
+#' @param cnPoolMaj a pool of possible major copy numbers
+#' @param cnPoolMin a pool of possible minor copy numbers
+#' @param cnPoolMajFractions prevalence of possible major copy numbers
+#' @param cnPoolMinFractions prevalence of possible minor copy numbers
+#' @param numVariants number of variants
+#' @return cnProfile, a matrix with the minor copy number, major copy number, and total copy number as its 1st, 2nd, and 3rd column
+#' @export
+GenerateCopyNumberProfile <- function(cnPoolMaj, cnPoolMin,cnPoolMajFractions, cnPoolMinFractions, numVariants){
+  tmp1 <- sample(cnPoolMaj, numVariants, cnPoolMajFractions, replace =T)
+  tmp2 <- sample(cnPoolMin, numVariants, cnPoolMinFractions, replace =T)
+  cnProfileTot <- tmp1 + tmp2
+  cnProfile <- cbind(tmp1, tmp2, cnProfileTot )
+  cnProfile <- t( apply(cnProfile, 1, sort) )
+  return(cnProfile)
+}
+
+#' Simulate a 2-subclone subclonal copy number profile.
+#' @param cnPoolMaj a pool of possible major copy numbers
+#' @param cnPoolMin a pool of possible minor copy numbers
+#' @param cnPoolMajFractions prevalence of possible major copy numbers
+#' @param cnPoolMinFractions prevalence of possible minor copy numbers
+#' @param numVariants number of variants
+#' @param subclonal a binary indicator of subclonal status, 1 for subclonal, 0 for clonal.
+#' @param ccfCN prevalence of the subclonal copy numbers
+#' @export
+GenerateSubClonalCNProfile <- function(cnPoolMaj, cnPoolMin,
+                                       cnPoolMajFractions, cnPoolMinFractions,
+                                       numVariants, subclonal, ccfCN) {
+  cnProfile <- matrix(-100, nrow = numVariants, ncol = 8)
+  for (ii in 1:numVariants) {
+    if (subclonal[ii]) {
+      tmp1 = tmp2 = NA
+      while (  identical(tmp1, tmp2) ) {
+        tmp1 = GenerateCopyNumberProfile(cnPoolMaj, cnPoolMin,cnPoolMajFractions, cnPoolMinFractions, 1)
+        tmp2 = GenerateCopyNumberProfile(cnPoolMaj, cnPoolMin,cnPoolMajFractions, cnPoolMinFractions, 1)
+      }
+      cnProfile[ii, ] = c(tmp1, ccfCN[1], tmp2, ccfCN[2])
+    } else {
+      cnProfile[ii, 1:4] = c( GenerateCopyNumberProfile(cnPoolMaj, cnPoolMin,
+                                                        cnPoolMajFractions, cnPoolMinFractions,
+                                                        1), 1)
+      cnProfile[ii, 8] = 0
+    }
+  }
+
+  return(cnProfile)
+}
+
+python_false_true_converter <- function(x) {
+  if (x == "False") {
+    x = FALSE
+  }
+
+  if (x == "True") {
+    x = TRUE
+  }
+  x
+}
