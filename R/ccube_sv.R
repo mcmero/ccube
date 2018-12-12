@@ -1455,7 +1455,7 @@ RemoveClusterAndReassignVariantsWithEMsteps_sv <- function(res, removeIdx, ssm =
 #' @export
 MergeClusters_sv <- function(res = res, ssm = ssm, tol = 1e-8, maxiter = 100, epi = 1e-3) {
 
-  res <- CullEmptyClusters(res = res, ssm = ssm)
+  res <- CullEmptyClusters_sv(res = res, ssm = ssm)
 
   if (is.matrix(res$full.model$ccfMean)) {
     ccfCentersMap = res$full.model$ccfMean[,]
