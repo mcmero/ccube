@@ -83,11 +83,7 @@ results <- RunCcubePipeline(ssm = mydata,
                             numOfClusterPool = numOfClusterPool, 
                             numOfRepeat = numOfRepeat,
                             runAnalysis = T, 
-                            runQC = T, 
-                            multiCore = F,
-                            basicFormats = F, 
-                            allFormats = F, 
-                            returnAll = T)
+                            runQC = T)
 ```
 
 The `results` list contains four variables:
