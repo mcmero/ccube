@@ -56,12 +56,12 @@ mydata <- mutate(rowwise(mydata),
                    },
                  true_mult1 = frac_cn1_sub1 * true_mult1_sub1 + frac_cn1_sub2 * true_mult1_sub2,
                  total_cn1 = frac_cn1_sub1 * total_cn1_sub1 + frac_cn1_sub2 * total_cn1_sub2,
-                 vaf1 = cp2ap(ccf_true, purity, normal_cn,
+                 true_vaf1 = cp2ap(ccf_true, purity, normal_cn,
                               total_cn1,
                               total_cn1,
                               true_mult1),
                  total_counts1 = rpois(1, total_cn1/2 * baseDepth),
-                 var_counts1 = rbinom(1, total_counts1, vaf1),
+                 var_counts1 = rbinom(1, total_counts1, true_vaf1),
                  ref_counts1 = total_counts1 - var_counts1)
 
 # 2nd break point
@@ -88,12 +88,12 @@ mydata <- mutate(rowwise(mydata),
                  },
                  true_mult2 = frac_cn2_sub1 * true_mult2_sub1 + frac_cn2_sub2 * true_mult2_sub2,
                  total_cn2 = frac_cn2_sub1 * total_cn2_sub1 + frac_cn2_sub2 * total_cn2_sub2,
-                 vaf2 = cp2ap(ccf_true, purity, normal_cn,
+                 true_vaf2 = cp2ap(ccf_true, purity, normal_cn,
                               total_cn2,
                               total_cn2,
                               true_mult2),
                  total_counts2 = rpois(1, total_cn2/2 * baseDepth),
-                 var_counts2 = rbinom(1, total_counts2, vaf2),
+                 var_counts2 = rbinom(1, total_counts2, true_vaf2),
                  ref_counts2 = total_counts2 - var_counts2
                  )
 

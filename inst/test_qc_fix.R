@@ -13,11 +13,9 @@ mydata <- read.delim("~/Dropbox/for_adam/G-R1-P_pyclone_input_350reads.tsv", str
 
 mydata$purity <- purity
 
-results <- RunCcubePipeline(dataFolder = "~/Dropbox/for_adam/", sampleName = "G-R1-P",
-                                resultFolder = "~/Dropbox/for_adam/",
-                                ssm = mydata, numOfClusterPool = numOfClusterPool, numOfRepeat = numOfRepeat,
-                                runAnalysis = T, runQC = T, multiCore = T,
-                                basicFormats = F, allFormats = F, returnAll = T)
+results <- RunCcubePipeline(ssm = mydata, numOfClusterPool = numOfClusterPool,
+                            numOfRepeat = numOfRepeat,runAnalysis = T, runQC = T,
+                            multiCore = T)
 
 
 

@@ -33,7 +33,7 @@ for (ii in seq_along(sampleNames)) {
 }
 
 
-allDebugFolder <- "~/debug_pcawg_samples_sv/debuged_samples_all_full_run_low_iter_test"
+allDebugFolder <- "~/debug_pcawg_samples_sv/debuged_samples_all_full_run_low_iter_10_test"
 
 if (! dir.exists(allDebugFolder) ) {
   dir.create(allDebugFolder)
@@ -42,12 +42,13 @@ if (! dir.exists(allDebugFolder) ) {
 
 singleEventSamples <- c()
 problemSamples <- c()
+inputProblemSamples <- c()
 for (ii in seq_along(sampleNames)) {
 
   cat(ii, "\n")
 
-  sampleName <- bugSamples[ii]
-  dataFolder <- bugdataFolders[ii]
+  sampleName <- sampleNames[ii]
+  dataFolder <- dataFolders[ii]
   resultsFolder <- paste0(allDebugFolder,"/", sampleName)
 
   if (! dir.exists(resultsFolder) ) {
@@ -73,8 +74,7 @@ for (ii in seq_along(sampleNames)) {
       RunCcubePipeline(ssm = mydata, modelSV = T,
                        numOfClusterPool = numOfClusterPool,
                        numOfRepeat = numOfRepeat, multiCore =T,
-                       runAnalysis = T, runQC = T, returnAll = T,
-                       maxiter = 20),
+                       runAnalysis = T, runQC = T, maxiter = 10),
       T
     )
 
@@ -98,6 +98,7 @@ for (ii in seq_along(sampleNames)) {
     }
 
   } else {
+    inputProblemSamples <- c(inputProblemSamples, sampleName)
     cat(mydata, file = paste0(resultsFolder, "/bug_info_mydata.txt"))
 
   }

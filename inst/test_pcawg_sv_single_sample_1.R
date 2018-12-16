@@ -55,39 +55,20 @@ problemSamples <- c("36e1d9cc-32ec-4a0a-8fb1-c46f058a6fb8", "60413de1-6cd2-4f74-
 
   mydata <- try( read.delim(inputFn), T)
 
-  if ( is.data.frame(mydata) ) {
-
-    if (nrow(mydata) == 1) {
-      singleEventSamples <- c(singleEventSamples, sampleName)
-      cat("single event", file = paste0(resultsFolder, "/single_event_sample")  )
-    }
 
 
-    ccubeRes <-
-      RunCcubePipeline(ssm = mydata, modelSV = T,
-                       numOfClusterPool = numOfClusterPool,
-                       numOfRepeat = numOfRepeat, multiCore =T,
-                       runAnalysisSnap = T, runQC = T, maxiter = 10)
+  ccubeRes <-
+    RunCcubePipeline(ssm = mydata, modelSV = T,
+                     numOfClusterPool = numOfClusterPool,
+                     numOfRepeat = numOfRepeat, multiCore =T,
+                     runAnalysisSnap = T, runQC = T, maxiter = 10)
 
-    if (is.list (ccubeRes) ) {
-      fn = paste0(resultsFolder, "/ccube_sv_results.RDdata")
-      save(ccubeRes, file = fn)
-      fn = paste0(resultsFolder, "/ccube_sv_results.pdf")
-      MakeCcubeStdPlot_sv(res = ccubeRes$res, ssm = ccubeRes$ssm, printPlot = T, fn = fn)
-    } else {
-      cat(ccubeRes, file = paste0(resultsFolder, "/bug_info_ccube.txt"))
 
-      if (nrow(mydata) > 1) {
-        problemSamples <- c(problemSamples, sampleName)
-        cat("problematic sample", file = paste0(resultsFolder, "/problematic_sample")  )
-      }
+    fn = paste0(resultsFolder, "/ccube_sv_results.RDdata")
+    save(ccubeRes, file = fn)
+    fn = paste0(resultsFolder, "/ccube_sv_results.pdf")
+    MakeCcubeStdPlot_sv(res = ccubeRes$res, ssm = ccubeRes$ssm, printPlot = T, fn = fn)
 
-    }
-
-  } else {
-    cat(mydata, file = paste0(resultsFolder, "/bug_info_mydata.txt"))
-
-  }
 
 
 

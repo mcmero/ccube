@@ -46,9 +46,9 @@ mydata$normal_cn <- 2
 
 mydata <- mutate(rowwise(mydata),
                  mult1 = sample(c(1,if (major_cn1 ==1) { 1 } else {major_cn1}), 1),
-                 vaf1 = cp2ap(ccf_true, purity, normal_cn, total_cn1, total_cn1, mult1),
+                 true_vaf1 = cp2ap(ccf_true, purity, normal_cn, total_cn1, total_cn1, mult1),
                  total_counts1 = rpois(1, total_cn1/2 * baseDepth),
-                 var_counts1 = rbinom(1, total_counts1, vaf1),
+                 var_counts1 = rbinom(1, total_counts1, true_vaf1),
                  ref_counts1 = total_counts1 - var_counts1)
 
 # 2nd break point
@@ -67,20 +67,18 @@ mydata$total_cn2 = cnProfile[,3]
 
 mydata <- mutate(rowwise(mydata),
                  mult2 = sample(c(1,if (major_cn2 ==1) { 1 } else {major_cn2}), 1),
-                 vaf2 = cp2ap(ccf_true, purity, normal_cn, total_cn2, total_cn2, mult2),
+                 true_vaf2 = cp2ap(ccf_true, purity, normal_cn, total_cn2, total_cn2, mult2),
                  total_counts2 = rpois(1, total_cn1/2 * baseDepth ),
-                 var_counts2 = rbinom(1, total_counts2, vaf2),
+                 var_counts2 = rbinom(1, total_counts2, true_vaf2),
                  ref_counts2 = total_counts2 - var_counts2)
 
 
 
+
 # SV prototype
-doubleBreakPtsRes <- RunCcubePipeline(dataFolder = "~/Dropbox/for_marek/", sampleName = "sv-test-sample",
-                                      ssm = mydata, modelSV = T,
+doubleBreakPtsRes <- RunCcubePipeline(ssm = mydata, modelSV = T,
                                       numOfClusterPool = numOfClusterPool, numOfRepeat = numOfRepeat,
-                                      runAnalysis = T, runQC = T,
-                                      ccubeResultRDataFile = "~/Dropbox/for_marek/ccube_sv_results.RData", multiCore = T,
-                                      basicFormats = F, allFormats = F, returnAll = T)
+                                      runAnalysis = T, runQC = T, , multiCore = T)
 
 fn1 = "~/Desktop/double_break_points_results.pdf"
 MakeCcubeStdPlot_sv(res = doubleBreakPtsRes$res, ssm = doubleBreakPtsRes$ssm, printPlot = T, fn = fn1)
@@ -91,11 +89,9 @@ mydata1 = mydata[, c("mutation_id", "var_counts1", "ref_counts1", "major_cn1", "
 mydata1 = dplyr::rename(mydata1, var_counts = var_counts1, ref_counts = ref_counts1,
                         major_cn = major_cn1, minor_cn = minor_cn1)
 
-breakPt1Res <- RunCcubePipeline(dataFolder = "~/Dropbox/for_marek/", sampleName = "sv-test-sample",
-                                      ssm = mydata1,
-                                      numOfClusterPool = numOfClusterPool, numOfRepeat = numOfRepeat,
-                                      runAnalysis = T, runQC = T, multiCore = T,
-                                      basicFormats = F, allFormats = F, returnAll = T)
+breakPt1Res <- RunCcubePipeline(ssm = mydata1,
+                                numOfClusterPool = numOfClusterPool, numOfRepeat = numOfRepeat,
+                                runAnalysis = T, runQC = T, multiCore = T)
 
 
 fn2 = "~/Desktop/ccube_1st_breakpoint.pdf"
@@ -104,11 +100,9 @@ MakeCcubeStdPlot(ssm = breakPt1Res$ssm, res = breakPt1Res$res, printPlot = T, fn
 mydata2= mydata[, c("mutation_id", "var_counts2", "ref_counts2", "major_cn2", "minor_cn2", "purity", "normal_cn")]
 mydata2 = dplyr::rename(mydata2, var_counts = var_counts2, ref_counts = ref_counts2, major_cn = major_cn2, minor_cn = minor_cn2)
 
-breakPt2Res <- RunCcubePipeline(dataFolder = "~/Dropbox/for_marek/", sampleName = "sv-test-sample",
-                                ssm = mydata2,
+breakPt2Res <- RunCcubePipeline(ssm = mydata2,
                                 numOfClusterPool = numOfClusterPool, numOfRepeat = numOfRepeat,
-                                runAnalysis = T, runQC = T, multiCore = T,
-                                basicFormats = F, allFormats = F, returnAll = T)
+                                runAnalysis = T, runQC = T, multiCore = T)
 
 fn3 = "~/Desktop/ccube_2nd_breakpoint.pdf"
 MakeCcubeStdPlot(ssm = breakPt2Res$ssm, res = breakPt2Res$res, printPlot = T, fn = fn3)
