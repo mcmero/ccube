@@ -292,6 +292,7 @@ GetCcf <- function(mydata, use = c("use_base", "use_one")) {
     index <- which(x==z)
     mean(y[index])
   }
+
   if (!"total_counts" %in% names(mydata)) {
     mydata <- dplyr::mutate(mydata, total_counts = ref_counts + var_counts)
   }
@@ -1487,6 +1488,77 @@ WritePcawgFormats <- function(ssm, res, resultFolder, sampleName,
     system(shellCommand, intern = TRUE)
   }
 
+}
+
+
+CheckAndPrepareCcubeInupts <- function(mydata) {
+
+  stopifnot(
+    all(c("var_counts","ref_counts") %in% names(mydata)))
+
+  if ( "major_cn_sub1" %in% names(mydata) &
+       "minor_cn_sub1" %in% names(mydata) &
+       "major_cn_sub2" %in% names(mydata) &
+       "minor_cn_sub2" %in% names(mydata) &
+       "subclonal_cn" %in% names(mydata) &
+       "frac_cn_sub1" %in% names(mydata) &
+       "frac_cn_sub2" %in% names(mydata) ) {
+    return(mydata)
+  }
+
+  if ( ! "frac_cn_sub1" %in% names(mydata) ) {
+    message(sprintf("Missing column: frac_cn_sub1. Assuming input copy number profiles are clonal"))
+    mydata$frac_cn_sub1 <- 1
+  }
+
+  if ( ! "frac_cn_sub2" %in% names(mydata) ) {
+    message(sprintf("Missing column: frac_cn_sub2. Set frac_cn_sub2 as 1- frac_cn_sub1"))
+    mydata$frac_cn_sub2 <- 1 - mydata$frac_cn_sub1
+  }
+
+  if ( ! "subclonal_cn" %in% names(mydata) ) {
+    message(sprintf("Missing column: subclonal_cn. Set subclonal_cn as frac_cn_sub1 < 1"))
+    mydata$subclonal_cn <- mydata$frac_cn_sub1 < 1
+  }
+
+  if ( ! "major_cn_sub1" %in% names(mydata) ) {
+    message(sprintf("Missing column: major_cn_sub1. Assuming input copy number profiles are clonal, set major_cn_sub1 as major_cn"))
+    stopifnot(all(c("major_cn") %in% names(mydata)))
+    mydata <- dplyr::rename(mydata, major_cn_sub1 = major_cn)
+  }
+
+  if ( ! "minor_cn_sub1" %in% names(mydata) ) {
+    message(sprintf("Missing column: minor_cn_sub1 Assuming input copy number profiles are clonal, set minor_cn_sub1 as minor_cn"))
+    stopifnot(all(c("minor_cn") %in% names(mydata)))
+    mydata <- dplyr::rename(mydata, minor_cn_sub1 = minor_cn)
+  }
+
+  if ( ! "major_cn_sub2" %in% names(mydata) ) {
+    message(sprintf("Missing column: major_cn_sub2 Assuming input copy number profiles are clonal, set major_cn_sub2 as -100"))
+    mydata$major_cn_sub2 <- -100
+  }
+
+  if ( ! "minor_cn_sub2" %in% names(mydata) ) {
+    message(sprintf("Missing column: minor_cn_sub2 Assuming input copy number profiles are clonal, set minor_cn_sub2 as -100"))
+    mydata$minor_cn_sub2 <- -100
+  }
+
+  mydata <- dplyr::mutate(mydata,
+                          major_cn = frac_cn_sub1 * major_cn_sub1 + frac_cn_sub2 * major_cn_sub2,
+                          minor_cn = frac_cn_sub1 * minor_cn_sub1 + frac_cn_sub2 * minor_cn_sub2,
+                          total_cn = major_cn + minor_cn)
+
+  if ( ! "normal_cn" %in% names(mydata) ) {
+    message(sprintf("Missing column: normal_cn. Set normal_cn as 2"))
+    mydata$normal_cn <- 2
+  }
+
+  if ( ! "purity" %in% names(mydata) ) {
+    message(sprintf("Missing column: purity. Estimate purity with GetPurity"))
+    mydata$purity <- GetPurity(mydata)
+  }
+
+  return(mydata)
 }
 
 

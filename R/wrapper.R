@@ -133,15 +133,11 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
       }
     }
 
-
     if (modelSV) {
-      ssm <- dplyr::mutate( dplyr::rowwise(ssm),
-                           subclonal_cn1 = python_false_true_converter(subclonal_cn1),
-                           subclonal_cn2 = python_false_true_converter(subclonal_cn2))
+      ssm <-CheckAndPrepareCcubeInupts_sv(ssm)
       ssm <- GetCcf_sv(ssm,  use=use)
     } else {
-      ssm <- dplyr::mutate( dplyr::rowwise(ssm),
-                           subclonal_cn = python_false_true_converter(subclonal_cn))
+      ssm <- CheckAndPrepareCcubeInupts(ssm)
       ssm <- GetCcf(ssm,  use=use)
     }
 
