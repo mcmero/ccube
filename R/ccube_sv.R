@@ -1644,6 +1644,8 @@ CheckAndPrepareCcubeInupts_sv <- function(mydata) {
        "subclonal_cn2" %in% names(mydata) &
        "frac_cn2_sub1" %in% names(mydata) &
        "frac_cn2_sub2" %in% names(mydata)) {
+    mydata$subclonal_cn1 <- mydata$frac_cn1_sub1 < 1
+    mydata$subclonal_cn2 <- mydata$frac_cn2_sub1 < 1
     return(mydata)
   }
 
