@@ -611,28 +611,38 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, max_mult_cn1_sub
 
       } else {
         # clonal cn
-        bvPool1 <- 1:max_mult_cn1_sub1[ii]
 
-        qq1 <- rep(NA, length(bvPool1))
-        for (jj in seq_along(bvPool1) ) {
+        if (cr1[ii] < 1) {
 
-          w1 <- purity * (bvPool1[jj] *(1-epi) -cr1[ii]*epi) / ((1-purity)*cn[ii] + purity * cr1[ii])
-          w1w1 <- w1^2
-          ef1 <- w1 * ccfMean +epi
+          bv1[ii] <- max_mult_cn1_sub1[ii]
 
-          term1_breakpoint1 <- bn1[ii] * (log (ef1) - w1w1*ccfCov/(2 * ef1^2 ) )
-          term2_breakpoint1 <- (dn1[ii] - bn1[ii]) * (log (1 - ef1) - w1w1*ccfCov/(2 * (1 - ef1)^2)  )
-          term3_breakpoint1 <- logChoose(dn1[ii], bn1[ii])
-
-          qq1[jj] <- sum ( responsibility[ii, ] *  (term1_breakpoint1 + term2_breakpoint1 + term3_breakpoint1)  )
-        }
-
-        maxQq1 <- which.max(qq1)
-        if ( length(maxQq1) == 0 ) {
-          bv1[ii] <- 1
         } else {
-          bv1[ii] <- bvPool1[maxQq1]
+
+          bvPool1 <- 1:max_mult_cn1_sub1[ii]
+
+          qq1 <- rep(NA, length(bvPool1))
+          for (jj in seq_along(bvPool1) ) {
+
+            w1 <- purity * (bvPool1[jj] *(1-epi) -cr1[ii]*epi) / ((1-purity)*cn[ii] + purity * cr1[ii])
+            w1w1 <- w1^2
+            ef1 <- w1 * ccfMean +epi
+
+            term1_breakpoint1 <- bn1[ii] * (log (ef1) - w1w1*ccfCov/(2 * ef1^2 ) )
+            term2_breakpoint1 <- (dn1[ii] - bn1[ii]) * (log (1 - ef1) - w1w1*ccfCov/(2 * (1 - ef1)^2)  )
+            term3_breakpoint1 <- logChoose(dn1[ii], bn1[ii])
+
+            qq1[jj] <- sum ( responsibility[ii, ] *  (term1_breakpoint1 + term2_breakpoint1 + term3_breakpoint1)  )
+          }
+
+          maxQq1 <- which.max(qq1)
+          if ( length(maxQq1) == 0 ) {
+            bv1[ii] <- 1
+          } else {
+            bv1[ii] <- bvPool1[maxQq1]
+          }
+
         }
+
       }
 
 
@@ -714,28 +724,38 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, max_mult_cn1_sub
 
       } else {
         # clonal cn
-        bvPool2 <- 1:max_mult_cn2_sub1[ii]
 
-        qq2 <- rep(NA, length(bvPool2))
-        for (jj in seq_along(bvPool2) ) {
+        if (cr2[ii] < 1) {
 
-          w2 <- purity * (bvPool2[jj] *(1-epi) -cr2[ii]*epi) / ((1-purity)*cn[ii] + purity * cr2[ii])
-          w2w2 <- w2^2
-          ef2 <- w2 * ccfMean +epi
+          bv2[ii] <- max_mult_cn2_sub1[ii]
 
-          term1_breakpoint2 <- bn2[ii] * (log (ef2) - w2w2*ccfCov/(2 * ef2^2 ) )
-          term2_breakpoint2 <- (dn2[ii] - bn2[ii]) * (log (1 - ef2) - w2w2*ccfCov/(2 * (1 - ef2)^2)  )
-          term3_breakpoint2 <- logChoose(dn2[ii], bn2[ii])
-
-          qq2[jj] <- sum ( responsibility[ii, ] *  (term1_breakpoint2 + term2_breakpoint2 + term3_breakpoint2)  )
-        }
-
-        maxQq2 <- which.max(qq2)
-        if ( length(maxQq2) == 0 ) {
-          bv2[ii] <- 1
         } else {
-          bv2[ii] <- bvPool2[maxQq2]
+
+          bvPool2 <- 1:max_mult_cn2_sub1[ii]
+
+          qq2 <- rep(NA, length(bvPool2))
+          for (jj in seq_along(bvPool2) ) {
+
+            w2 <- purity * (bvPool2[jj] *(1-epi) -cr2[ii]*epi) / ((1-purity)*cn[ii] + purity * cr2[ii])
+            w2w2 <- w2^2
+            ef2 <- w2 * ccfMean +epi
+
+            term1_breakpoint2 <- bn2[ii] * (log (ef2) - w2w2*ccfCov/(2 * ef2^2 ) )
+            term2_breakpoint2 <- (dn2[ii] - bn2[ii]) * (log (1 - ef2) - w2w2*ccfCov/(2 * (1 - ef2)^2)  )
+            term3_breakpoint2 <- logChoose(dn2[ii], bn2[ii])
+
+            qq2[jj] <- sum ( responsibility[ii, ] *  (term1_breakpoint2 + term2_breakpoint2 + term3_breakpoint2)  )
+          }
+
+          maxQq2 <- which.max(qq2)
+          if ( length(maxQq2) == 0 ) {
+            bv2[ii] <- 1
+          } else {
+            bv2[ii] <- bvPool2[maxQq2]
+          }
+
         }
+
       }
 
     }

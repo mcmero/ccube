@@ -320,19 +320,19 @@ GetCcf <- function(mydata, use = c("use_base", "use_one")) {
 
   if (use=="use_base") {
     mydata <- dplyr::mutate(dplyr::rowwise(mydata),
-                            ccf1 = MapVaf2CcfPyClone(var_counts/total_counts,
+                            ccf1 = MapVaf2CcfPyClone(vaf,
                                                      purity,
                                                      normal_cn,
                                                      total_cn,
                                                      total_cn,
                                                      major_cn, lower = 0, upper = 2),
-                            ccf2 = MapVaf2CcfPyClone(var_counts/total_counts,
+                            ccf2 = MapVaf2CcfPyClone(vaf,
                                                      purity,
                                                      normal_cn,
                                                      total_cn,
                                                      total_cn,
                                                      minor_cn, lower = 0, upper = 2),
-                            ccf3 = MapVaf2CcfPyClone(var_counts/total_counts,
+                            ccf3 = MapVaf2CcfPyClone(vaf,
                                                      purity,
                                                      normal_cn,
                                                      total_cn,
@@ -569,22 +569,30 @@ VariationalMaximimizationStep <- function(bn, dn, cn, cr, max_mult_cn_sub1, max_
 
       } else {
 
-        bvPool <- 1:max_mult_cn_sub1[ii]
-        qq <- rep(NA, length(bvPool))
-        for (jj in seq_along(bvPool) ) {
-          aa <- purity * (bvPool[jj] *(1-epi) -cr[ii]*epi) / ((1-purity)*cn[ii] + purity * cr[ii])
-          aa2 <- aa^2
-          bb <- epi
-          term1 <- sum(responsibility[ii, ] * bn[ii] * (log (aa * ccfMean +bb) - aa2*ccfCov/(2 * (aa * ccfMean +bb)^2 ) ))
-          term2 <- sum(responsibility[ii, ] * (dn[ii] - bn[ii]) * (log (1 - aa * ccfMean - bb) - aa2*ccfCov/(2 * (1 - aa * ccfMean -bb)^2)  ))
-          term3 <- sum( responsibility[ii, ]*  logChoose(dn[ii], bn[ii]) )
-          qq[jj] <- term1 + term2 + term3
-        }
-        maxQq <- which.max(qq)
-        if ( length(maxQq) == 0 ) {
-          bv[ii] <- 1
+        if ( cr[ii] < 1 ) {
+
+          bv[ii] <- max_mult_cn_sub1[ii]
+
         } else {
-          bv[ii] <- bvPool[maxQq]
+
+          bvPool <- 1:max_mult_cn_sub1[ii]
+          qq <- rep(NA, length(bvPool))
+          for (jj in seq_along(bvPool) ) {
+            aa <- purity * (bvPool[jj] *(1-epi) -cr[ii]*epi) / ((1-purity)*cn[ii] + purity * cr[ii])
+            aa2 <- aa^2
+            bb <- epi
+            term1 <- sum(responsibility[ii, ] * bn[ii] * (log (aa * ccfMean +bb) - aa2*ccfCov/(2 * (aa * ccfMean +bb)^2 ) ))
+            term2 <- sum(responsibility[ii, ] * (dn[ii] - bn[ii]) * (log (1 - aa * ccfMean - bb) - aa2*ccfCov/(2 * (1 - aa * ccfMean -bb)^2)  ))
+            term3 <- sum( responsibility[ii, ]*  logChoose(dn[ii], bn[ii]) )
+            qq[jj] <- term1 + term2 + term3
+          }
+          maxQq <- which.max(qq)
+          if ( length(maxQq) == 0 ) {
+            bv[ii] <- 1
+          } else {
+            bv[ii] <- bvPool[maxQq]
+          }
+
         }
 
       }
@@ -1503,6 +1511,7 @@ CheckAndPrepareCcubeInupts <- function(mydata) {
        "subclonal_cn" %in% names(mydata) &
        "frac_cn_sub1" %in% names(mydata) &
        "frac_cn_sub2" %in% names(mydata) ) {
+    mydata$subclonal_cn <- mydata$frac_cn_sub1 < 1
     return(mydata)
   }
 
