@@ -2,7 +2,7 @@
 % Please edit documentation in R/ccube.R
 \name{ccube_m6}
 \alias{ccube_m6}
-\title{Run Ccube with model 6: Normal-Binomial}
+\title{Run Ccube with model 6: Normal-Binomial. TODO: to be removed in the final release}
 \usage{
 ccube_m6(mydata, epi = 0.001, init = 2, prior = NULL, tol = 1e-20,
   maxiter = 1000, fit_mult = F, fit_hyper = T, use = c("use_base",
@@ -33,5 +33,5 @@ ccube_m6(mydata, epi = 0.001, init = 2, prior = NULL, tol = 1e-20,
 a list containing model parameters
 }
 \description{
-Run Ccube with model 6: Normal-Binomial
+Run Ccube with model 6: Normal-Binomial. TODO: to be removed in the final release
 }
