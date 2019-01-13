@@ -446,7 +446,14 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, max_mult_cn1_sub
                                              bn2, dn2, cr2, max_mult_cn2_sub1, max_mult_cn2_sub2,
                                              frac_cn2_sub1, frac_cn2_sub2, subclonal_cn2,
                                              epi, purity, model,
-                                             fit_mult = T, fit_hyper = T) {
+                                             fit_mult = T, fit_hyper = T, fit_params_ccf = T,
+                                             fit_params_pi = T) {
+
+  responsibility <- model$responsibility
+
+  # Gaussian approximation for each clone
+  ccfMean = model$ccfMean
+  ccfCov = model$ccfCov
 
   bv1 = model$bv1
   bv2 = model$bv2
@@ -455,24 +462,19 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, max_mult_cn1_sub
   bv2_sub1 = model$bv2_sub1
   bv2_sub2 = model$bv2_sub2
 
-  dirichletConcentration0 <- model$dirichletConcentration0
-  responsibility <- model$responsibility
   normalMean <- model$normalMean
   invWhishartScale <- model$invWhishartScale
 
-  # Gaussian approximation for each clone
-  ccfMean = model$ccfMean
-  ccfCov = model$ccfCov
+  if (fit_params_ccf) {
 
-  k <- length(ccfMean)
+    k <- length(ccfMean)
 
-  w1 = ( purity*(bv1*(1-epi) - cr1*epi) ) / ( (1-purity)*cn + purity*cr1 )
-  w2 = ( purity*(bv2*(1-epi) - cr2*epi) ) / ( (1-purity)*cn + purity*cr2 )
+    w1 = ( purity*(bv1*(1-epi) - cr1*epi) ) / ( (1-purity)*cn + purity*cr1 )
+    w2 = ( purity*(bv2*(1-epi) - cr2*epi) ) / ( (1-purity)*cn + purity*cr2 )
 
-  ccfMeanOld <- ccfMean
+    ccfMeanOld <- ccfMean
 
     for (i in 1:k){
-
 
       term1 = 1/invWhishartScale*normalMean
       term2 = 1/invWhishartScale
@@ -508,25 +510,31 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, max_mult_cn1_sub
       ef2 = w2 * ccfMean[i] + epi
 
       ccfCov[i] = solve(1/invWhishartScale + sum(responsibility[,i]*( w1^2 * (bn1/(ef1)^2 + (dn1-bn1)/( (1-ef1)^2 ) ) +
-                                                           w2^2 * (bn2/(ef2)^2 + (dn2-bn2)/( (1-ef2)^2 ) ) )
-                                    )
+                                                                        w2^2 * (bn2/(ef2)^2 + (dn2-bn2)/( (1-ef2)^2 ) ) )
+                                                 )
                         )
     }
 
+    if (length(which(ccfMean > 1) ) >0 ){
+      ccfMean[which(ccfMean>1)] = 1
+    }
+    if (length(which(ccfMean < 1e-20)) > 0){
+      ccfMean[which(ccfMean<1e-20)] = 1e-20
+    }
 
-  dataSumResponsibility <- colSums(responsibility) # 10.51
-  dirichletConcentration <- dirichletConcentration0 + dataSumResponsibility # 10.58
+    model$ccfMean <- ccfMean
+    model$ccfCov <- ccfCov
 
 
-  if (length(which(ccfMean > 1) ) >0 ){
-    ccfMean[which(ccfMean>1)] = 1
   }
-  if (length(which(ccfMean < 1e-20)) > 0){
-    ccfMean[which(ccfMean<1e-20)] = 1e-20
+
+  if (fit_params_pi) {
+    dirichletConcentration <- model$dirichletConcentration0 + colSums(responsibility) # 10.58
+    model$dirichletConcentration <- dirichletConcentration
   }
 
-  numberOfDataPoints <- nrow(responsibility)
   if (fit_mult) {
+    numberOfDataPoints <- nrow(responsibility)
     for (ii in 1:numberOfDataPoints) {
       # TODO: General implementation of more than two subclonal copy number populations
 
@@ -582,8 +590,6 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, max_mult_cn1_sub
           bv1_sub1[ii] <- sub_cn1_mults$X[maxQq1]
           bv1_sub2[ii] <- sub_cn1_mults$Y[maxQq1]
         }
-
-
 
         # m_upper1 = (1-epi)*( (1-purity)*cn + purity*cr1[ii] ) / (ccfMean*purity)*(1-epi) +
         #   epi*cr1[ii]/(1-epi)
@@ -796,10 +802,6 @@ VariationalMaximimizationStep_sv <- function(bn1, dn1, cn, cr1, max_mult_cn1_sub
     model$normalMean <- mean(ccfMean)
     model$invWhishartScale <-mean((ccfMean - model$normalMean)^2 + ccfCov)
   }
-
-  model$dirichletConcentration <- dirichletConcentration
-  model$ccfMean <- ccfMean
-  model$ccfCov <- ccfCov
 
   model
 }
@@ -1764,6 +1766,144 @@ CheckAndPrepareCcubeInupts_sv <- function(mydata) {
   return(mydata)
 }
 
+#' Computing responsibilities (assignment probabilities) with modified Ccube_sv VBEM-step
+#' @param res A reference Ccube results list
+#' @param ssm A data frame of SVs to be assigned. By default, the data is assumed to have been processed by CcubeSV model. So it should have ccube_mult1 and ccube_mult2 columns.
+#' @param tol convergence threshold
+#' @param maxiter maximum iterations, default number is 100.
+#' @param epi sequencing error, default is 1e-3
+#' @param verbos show VBEM progress
+#' @return a standard CcubeSV model with recomputed responsibilities and logResponsibilities
+#' @export
+AssignWithCcube_sv <- function(res, ssm, tol = 1e-8, maxiter = 100, epi = 1e-3, verbose = F) {
+
+  ssm <- CheckAndPrepareCcubeInupts_sv(ssm)
 
 
+  if ("ccube_mult1" %in% names(ssm) & "ccube_mult2" %in% names(ssm)) {
+    res$full.model$bv1 <- ssm$ccube_mult1
+    res$full.model$bv2 <- ssm$ccube_mult2
+  } else {
+    ssm <- GetCcf_sv(ssm, use = "use_base")
+    res$full.model$bv1 <- ssm$rough_mult1
+    res$full.model$bv2 <- ssm$rough_mult2
+  }
+
+  res$full.model$dirichletConcentration0 <- mean(res$full.model$dirichletConcentration)
+  res$full.model$ccfMean <- t(as.matrix(res$full.model$ccfMean))
+  res$full.model$ccfCov <-  t(as.matrix(res$full.model$ccfCov))
+
+  ll = rep(-Inf, maxiter)
+  vbiter = 1
+  converged = F
+  degenerated = F
+
+  while (!converged & vbiter < maxiter & !degenerated) {
+
+    vbiter = vbiter + 1
+
+    if (vbiter == 2)  {
+      no.weights = T
+    } else {
+      no.weights = F
+    }
+
+    res$full.model <- VarationalExpectationStep_sv(bn1 = ssm$var_counts1,
+                                                   dn1 = ssm$ref_counts1 + ssm$var_counts1,
+                                                   cn = ssm$normal_cn,
+                                                   cr1 = ssm$frac_cn1_sub1 * (ssm$major_cn1_sub1 + ssm$minor_cn1_sub1) +
+                                                     ssm$frac_cn1_sub2 *(ssm$major_cn1_sub2 + ssm$minor_cn1_sub2),
+                                                   bn2 = ssm$var_counts2,
+                                                   dn2 = ssm$ref_counts2 + ssm$var_counts2,
+                                                   cr2 = ssm$frac_cn2_sub1 * (ssm$major_cn2_sub1 + ssm$minor_cn2_sub1) +
+                                                     ssm$frac_cn2_sub2 *(ssm$major_cn2_sub2 + ssm$minor_cn2_sub2),
+                                                   epi = epi,
+                                                   purity = unique(ssm$purity),
+                                                   model = res$full.model, no.weights = no.weights)
+
+    res$full.model <- VariationalMaximimizationStep_sv(bn1 = ssm$var_counts1,
+                                                       dn1 = ssm$ref_counts1 + ssm$var_counts1,
+                                                       cn = ssm$normal_cn,
+                                                       cr1 = ssm$frac_cn1_sub1 * (ssm$major_cn1_sub1 + ssm$minor_cn1_sub1) +
+                                                         ssm$frac_cn1_sub2 *(ssm$major_cn1_sub2 + ssm$minor_cn1_sub2),
+                                                       max_mult_cn1_sub1 = ssm$major_cn1_sub1,
+                                                       max_mult_cn1_sub2 = ssm$major_cn1_sub2,
+                                                       frac_cn1_sub1 = ssm$frac_cn1_sub1,
+                                                       frac_cn1_sub2 = ssm$frac_cn1_sub2,
+                                                       subclonal_cn1 = ssm$subclonal_cn1,
+                                                       bn2 = ssm$var_counts2,
+                                                       dn2 = ssm$ref_counts2 + ssm$var_counts2,
+                                                       cr2 = ssm$frac_cn2_sub1 * (ssm$major_cn2_sub1 + ssm$minor_cn2_sub1) +
+                                                         ssm$frac_cn2_sub2 *(ssm$major_cn2_sub2 + ssm$minor_cn2_sub2),
+                                                       max_mult_cn2_sub1 = ssm$major_cn2_sub1,
+                                                       max_mult_cn2_sub2 = ssm$major_cn2_sub2,
+                                                       frac_cn2_sub1 = ssm$frac_cn2_sub1,
+                                                       frac_cn2_sub2 = ssm$frac_cn2_sub2,
+                                                       subclonal_cn2 = ssm$subclonal_cn2,
+                                                       epi = epi,
+                                                       purity = unique(ssm$purity),
+                                                       model = res$full.model, fit_params_ccf = F)
+
+    ll[vbiter] = VariationalLowerBound_sv(bn1 = ssm$var_counts1,
+                                          dn1 = ssm$ref_counts1 + ssm$var_counts1,
+                                          cn = ssm$normal_cn,
+                                          cr1 = ssm$frac_cn1_sub1 * (ssm$major_cn1_sub1 + ssm$minor_cn1_sub1) +
+                                            ssm$frac_cn1_sub2 *(ssm$major_cn1_sub2 + ssm$minor_cn1_sub2),
+                                          bn2 = ssm$var_counts2,
+                                          dn2 = ssm$ref_counts2 + ssm$var_counts2,
+                                          cr2 = ssm$frac_cn2_sub1 * (ssm$major_cn2_sub1 + ssm$minor_cn2_sub1) +
+                                            ssm$frac_cn2_sub2 *(ssm$major_cn2_sub2 + ssm$minor_cn2_sub2),
+                                          epi = epi,
+                                          purity = unique(ssm$purity),
+                                          model = res$full.model)/length(res$full.model$bv1)
+
+    converged <- abs(ll[vbiter] - ll[vbiter-1]) < (tol * abs(ll[vbiter]))
+    degenerated <- (ll[vbiter] - ll[vbiter-1]) < 0
+    if(verbose) cat(sprintf("\rVB-EM-%d: L = %.8f \r", vbiter, ll[vbiter]))
+  }
+
+  res$full.model <- SortClusters(res$full.model)
+
+  res$label <- apply(res$full.model$responsibility, 1, which.max)
+
+  Epi <- (res$full.model$dirichletConcentration + colSums(res$full.model$responsibility)) /
+    (length(res$full.model$ccfMean) * res$full.model$dirichletConcentration0 + length(res$label))
+  res$full.model$Epi <- Epi/sum(Epi)
+
+  return(res)
+}
+
+#' Annotate mydata with CcubeSV results
+#' @param ssm CcubeSV input data
+#' @param res CcubeSV results list
+#' @return ssm Annotated input data
+#' @export
+AnnotateCcubeResults_sv <- function(ssm, res) {
+
+  ssm <- CheckAndPrepareCcubeInupts_sv(ssm)
+  ssm <- GetCcf_sv(ssm, use = "use_base")
+
+  ssm$ccube_ccf_mean <- res$full.model$ccfMean[res$label]
+  ssm$ccube_mult1 <- res$full.model$bv1
+  ssm$ccube_mult2 <- res$full.model$bv2
+
+  ssm <- dplyr::mutate( dplyr::rowwise(ssm),
+                        ccube_ccf1 = MapVaf2CcfPyClone(vaf1,
+                                                       purity,
+                                                       normal_cn,
+                                                       total_cn1,
+                                                       total_cn1,
+                                                       ccube_mult1,
+                                                       constraint=F),
+                        ccube_ccf2 = MapVaf2CcfPyClone(vaf2,
+                                                       purity,
+                                                       normal_cn,
+                                                       total_cn2,
+                                                       total_cn2,
+                                                       ccube_mult2,
+                                                       constraint=F)
+  )
+
+  return(ssm)
+}
 
