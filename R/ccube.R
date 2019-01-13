@@ -3,7 +3,7 @@
 # of d variables
 SortClusters <- function(model) {
 
-  if ( ncol(model$responsibility) > 1 ) {
+  if ( length(model$ccfMean) > 1 ) {
 
     if (is.matrix(model$ccfMean)) {
       idx <- order(apply(model$ccfMean, 2, mean))
@@ -29,11 +29,22 @@ SortClusters <- function(model) {
       names(model$ccfCov) <- NULL
     }
 
+
     model$responsibility <- model$responsibility[, idx]
 
     model$logResponsibility <- model$logResponsibility[, idx]
 
+    if (!is.matrix(model$responsibility) ) {
+      model$responsibility <- t ( as.matrix(model$responsibility)  )
+      model$logResponsibility <- t ( as.matrix(model$responsibility)  )
+    }
+
     model$dirichletConcentration <- model$dirichletConcentration[idx]
+
+  } else if (! is.matrix(model$responsibility) & length(model$responsibility) == 1 ) {
+
+    model$responsibility <- as.matrix(model$responsibility)
+    model$logResponsibility <- as.matrix(model$logResponsibility)
 
   }
 
@@ -427,7 +438,7 @@ initialization <- function(X, init, prior) {
 ############ Variational-Maximimization ############
 VariationalMaximimizationStep <- function(bn, dn, cn, cr, max_mult_cn_sub1, max_mult_cn_sub2,
                                           frac_cn_sub1, frac_cn_sub2, subclonal_cn,
-                                          epi, purity, model, fit_mult = F, fit_hyper = T) {
+                                          epi, purity, model, fit_mult = T, fit_hyper = T) {
 
   bv <- model$bv
   bv_sub1 <- model$bv_sub1
