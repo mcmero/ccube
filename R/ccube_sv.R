@@ -1790,8 +1790,8 @@ AssignWithCcube_sv <- function(res, ssm, tol = 1e-8, maxiter = 100, epi = 1e-3, 
   }
 
   # res$full.model$dirichletConcentration0 <- mean(res$full.model$dirichletConcentration/sum(res$full.model$dirichletConcentration))
-  res$full.model$ccfMean <- t(as.matrix(res$full.model$ccfMean))
-  res$full.model$ccfCov <-  t(as.matrix(res$full.model$ccfCov))
+  res$full.model$ccfMean <- t(as.matrix(as.numeric(res$full.model$ccfMean)))
+  res$full.model$ccfCov <-  t(as.matrix(as.numeric(res$full.model$ccfCov)))
 
   ll = rep(-Inf, maxiter)
   vbiter = 1
