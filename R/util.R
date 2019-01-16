@@ -407,3 +407,39 @@ python_false_true_converter <- function(x) {
   }
   x
 }
+
+
+
+#' Combine a SNV and a SV result list.
+#' @param resSNV SNV result list
+#' @param resSV SV result list
+#' @return a list containing combined results
+#' @export
+CombineSNVandSVResults <- function(resSNV, resSV) {
+  fm1 = resSNV$full.model
+  fm2 = resSV$full.model
+
+  fm =
+    list(
+      ccfMean = c(fm1$ccfMean, fm2$ccfMean),
+      ccfCov = c(fm1$ccfCov, fm2$ccfCov),
+      dirichletConcentration = c(),
+      Epi = c(),
+      responsibility = c(),
+      logResponsibility = c(),
+      dirichletConcentration0 = mean(fm1$dirichletConcentration/sum(fm1$dirichletConcentration) ),
+      normalMean = fm1$normalMean,
+      invWhishartScale = fm1$invWhishartScale,
+      bv = fm1$bv,
+      bv_sub1 = fm1$bv_sub1,
+      bv_sub2 = fm1$bv_sub2,
+      bv1 = fm2$bv1,
+      bv2 = fm2$bv2,
+      bv1_sub1 = fm2$bv1_sub1,
+      bv1_sub2 = fm2$bv1_sub2,
+      bv2_sub1 = fm2$bv2_sub1,
+      bv2_sub2 = fm2$bv2_sub1
+      )
+
+  return( list(full.model = fm) )
+}
