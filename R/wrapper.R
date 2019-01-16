@@ -358,3 +358,30 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
 
   return(list(res = res, results = results, ssm = ssm, lb = lb))
 }
+
+
+#' A pipeline to post assign events.
+#' @param snvRes SNV result list
+#' @param svRes SV result list
+#' @param mydata A data frame of variants to be assigned. Ideally, the data has been processed by CcubeSV model. So it should have ccube_mult1 and ccube_mult2 columns.
+#' @return A list containing, res, the post assigned result list and, ssm, the annotated data
+#' @export
+RunPostAssignPipeline <- function(snvRes, svRes = NULL, mydata) {
+
+  if (!is.null(svRes)) {
+    combinedRes <- CombineSNVandSVResults(snvRes, svRes)
+  } else {
+    combinedRes <- snvRes
+  }
+
+  postAssignRes <- AssignWithCcube_sv(combinedRes, mydata, verbose = T)
+
+  if (nrow(mydata) > 1) {
+    postAssignRes <- CullEmptyClusters_sv(res = postAssignRes, ssm = mydata)
+    postAssignRes <- CullSmallClusters_sv(res = postAssignRes, ssm = mydata, th = 1e-2)
+    postAssignRes <- MergeClusters_sv(res = postAssignRes, ssm = mydata)
+  }
+  annotatedSsm <- AnnotateCcubeResults_sv(mydata, postAssignRes)
+
+  return(list(res = postAssignRes, ssm = annotatedSsm))
+}
