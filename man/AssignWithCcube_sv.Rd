@@ -10,7 +10,7 @@ AssignWithCcube_sv(res, ssm, tol = 1e-08, maxiter = 100, epi = 0.001,
 \arguments{
 \item{res}{A reference Ccube results list}
 
-\item{ssm}{A data frame of SVs to be assigned. By default, the data is assumed to have been processed by CcubeSV model. So it should have ccube_mult1 and ccube_mult2 columns.}
+\item{ssm}{A data frame of SVs to be assigned. Ideally, the data has been processed by CcubeSV model. So it should have ccube_mult1 and ccube_mult2 columns.}
 
 \item{tol}{convergence threshold}
 
