@@ -847,11 +847,11 @@ VarationalExpectationStep_sv <- function(bn1, dn1, cn, cr1,
       (dn2 - bn2) * (log (1 - ef2) - w2w2*ccfCov[i]/(2 * (1 - ef2)^2) )
   }
 
-  Elogpi <- digamma(dirichletConcentration) - digamma(sum(dirichletConcentration))
+
   if (no.weights) {
     logRho <-  Epbk  #eq (19)  10.46
   } else {
-
+    Elogpi <- digamma(dirichletConcentration) - digamma(sum(dirichletConcentration))
     logRho <- bsxfun.se("+", Epbk, Elogpi)
   }
 
@@ -1768,7 +1768,7 @@ CheckAndPrepareCcubeInupts_sv <- function(mydata) {
 
 #' Computing responsibilities (assignment probabilities) with modified Ccube_sv VBEM-step
 #' @param res A reference Ccube results list
-#' @param ssm A data frame of SVs to be assigned. By default, the data is assumed to have been processed by CcubeSV model. So it should have ccube_mult1 and ccube_mult2 columns.
+#' @param ssm A data frame of SVs to be assigned. Ideally, the data has been processed by CcubeSV model. So it should have ccube_mult1 and ccube_mult2 columns.
 #' @param tol convergence threshold
 #' @param maxiter maximum iterations, default number is 100.
 #' @param epi sequencing error, default is 1e-3
@@ -1789,7 +1789,7 @@ AssignWithCcube_sv <- function(res, ssm, tol = 1e-8, maxiter = 100, epi = 1e-3, 
     res$full.model$bv2 <- ssm$rough_mult2
   }
 
-  res$full.model$dirichletConcentration0 <- mean(res$full.model$dirichletConcentration)
+  # res$full.model$dirichletConcentration0 <- mean(res$full.model$dirichletConcentration/sum(res$full.model$dirichletConcentration))
   res$full.model$ccfMean <- t(as.matrix(res$full.model$ccfMean))
   res$full.model$ccfCov <-  t(as.matrix(res$full.model$ccfCov))
 
@@ -1906,4 +1906,3 @@ AnnotateCcubeResults_sv <- function(ssm, res) {
 
   return(ssm)
 }
-
