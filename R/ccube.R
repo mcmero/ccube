@@ -438,7 +438,8 @@ initialization <- function(X, init, prior) {
 ############ Variational-Maximimization ############
 VariationalMaximimizationStep <- function(bn, dn, cn, cr, max_mult_cn_sub1, max_mult_cn_sub2,
                                           frac_cn_sub1, frac_cn_sub2, subclonal_cn,
-                                          epi, purity, model, fit_mult = T, fit_hyper = T) {
+                                          epi, purity, model, fit_mult = T, fit_hyper = T, fit_params_ccf = T,
+                                          fit_params_pi = T) {
 
   bv <- model$bv
   bv_sub1 <- model$bv_sub1
@@ -455,7 +456,8 @@ VariationalMaximimizationStep <- function(bn, dn, cn, cr, max_mult_cn_sub1, max_
   ccfMean = model$ccfMean
   ccfCov = model$ccfCov
 
-  k <- length(ccfMean)
+  if (fit_params_ccf){
+    k <- length(ccfMean)
     Bn = (1-purity)*cn + purity*cr
     Cn = purity*(bv*(1-epi) - cr*epi)
 
@@ -491,16 +493,25 @@ VariationalMaximimizationStep <- function(bn, dn, cn, cr, max_mult_cn_sub1, max_
     }
 
 
-  dataSumResponsibility <- colSums(responsibility) # 10.51
-  dirichletConcentration <- dirichletConcentration0 + dataSumResponsibility # 10.58
+    if (length(which(ccfMean > 1) ) >0 ){
+      ccfMean[which(ccfMean>1)] = 1
+    }
+    if (length(which(ccfMean < 1e-20)) > 0){
+      ccfMean[which(ccfMean<1e-20)] = 1e-20
+    }
+
+    model$ccfMean <- ccfMean
+    model$ccfCov <- ccfCov
+
+  }
 
 
-  if (length(which(ccfMean > 1) ) >0 ){
-    ccfMean[which(ccfMean>1)] = 1
+  if (fit_params_pi) {
+    dirichletConcentration <- model$dirichletConcentration0 + colSums(responsibility) # 10.58
+    model$dirichletConcentration <- dirichletConcentration
   }
-  if (length(which(ccfMean < 1e-20)) > 0){
-    ccfMean[which(ccfMean<1e-20)] = 1e-20
-  }
+
+
 
 
   numberOfDataPoints <- nrow(responsibility)
@@ -644,10 +655,6 @@ VariationalMaximimizationStep <- function(bn, dn, cn, cr, max_mult_cn_sub1, max_
     model$invWhishartScale <-mean((ccfMean - model$normalMean)^2 + ccfCov)
   }
 
-  model$dirichletConcentration <- dirichletConcentration
-  model$ccfMean <- ccfMean
-  model$ccfCov <- ccfCov
-
   model
 }
 
@@ -682,11 +689,11 @@ VarationalExpectationStep <- function(bn, dn, cn, cr, epi, purity, model, no.wei
       (dn - bn) * (log (1 - aa * ccfMean[i] - bb) - aa2*ccfCov[i]/(2 * (1 - aa * ccfMean[i] -bb)^2)  )
   }
 
-  Elogpi <- digamma(dirichletConcentration) - digamma(sum(dirichletConcentration))
+
   if (no.weights) {
     logRho <-  Epbk  #eq (19)  10.46
   } else {
-
+    Elogpi <- digamma(dirichletConcentration) - digamma(sum(dirichletConcentration))
     logRho <- bsxfun.se("+", Epbk, Elogpi)
   }
 
@@ -1258,8 +1265,8 @@ RemoveClusterAndReassignVariantsWithEMsteps <- function(res, removeIdx, ssm = NU
                                                         subclonal_cn = ssm$subclonal_cn,
                                                         epi = epi,
                                                         purity = unique(ssm$purity),
-                                                        model = res$full.model,fit_mult = fit_mult,
-                                                        fit_hyper = fit_hyper)
+                                                        model = res$full.model,
+                                                        fit_mult = fit_mult, fit_hyper = fit_hyper)
 
         ll[vbiter] = VariationalLowerBound(bn = ssm$var_counts,
                                    dn = ssm$ref_counts + ssm$var_counts,
@@ -1581,4 +1588,120 @@ CheckAndPrepareCcubeInupts <- function(mydata) {
   return(mydata)
 }
 
+
+#' Computing responsibilities (assignment probabilities) with modified Ccube VBEM-step
+#' @param res A reference Ccube results list
+#' @param ssm A data frame of SNVs to be assigned. Ideally, the data has been processed by Ccube model. So it should have the ccube_mult column.
+#' @param tol convergence threshold
+#' @param maxiter maximum iterations, default number is 100.
+#' @param epi sequencing error, default is 1e-3
+#' @param verbos show VBEM progress
+#' @return a standard Ccube model with recomputed responsibilities and logResponsibilities
+#' @export
+AssignWithCcube <- function(res, ssm, tol = 1e-8, maxiter = 100, epi = 1e-3, verbose = F) {
+
+  ssm <- CheckAndPrepareCcubeInupts(ssm)
+
+
+  if ("ccube_mult" %in% names(ssm) ) {
+    res$full.model$bv <- ssm$ccube_mult
+  } else {
+    ssm <- GetCcf(ssm, use = "use_base")
+    res$full.model$bv <- ssm$rough_mult
+  }
+
+  # res$full.model$dirichletConcentration0 <- mean(res$full.model$dirichletConcentration/sum(res$full.model$dirichletConcentration))
+  res$full.model$ccfMean <- t(as.matrix(as.numeric(res$full.model$ccfMean)))
+  res$full.model$ccfCov <-  t(as.matrix(as.numeric(res$full.model$ccfCov)))
+
+  ll = rep(-Inf, maxiter)
+  vbiter = 1
+  converged = F
+  degenerated = F
+
+  while (!converged & vbiter < maxiter & !degenerated) {
+
+    vbiter = vbiter + 1
+
+    if (vbiter == 2)  {
+      no.weights = T
+    } else {
+      no.weights = F
+    }
+
+    res$full.model <- VarationalExpectationStep(bn = ssm$var_counts,
+                                                dn = ssm$ref_counts + ssm$var_counts,
+                                                cn = ssm$normal_cn,
+                                                cr = ssm$frac_cn_sub1 * (ssm$major_cn_sub1 + ssm$minor_cn_sub1) +
+                                                  ssm$frac_cn_sub2 *(ssm$major_cn_sub2 + ssm$minor_cn_sub2),
+                                                epi = epi,
+                                                purity = unique(ssm$purity),
+                                                model = res$full.model,
+                                                no.weights = no.weights)
+
+    res$full.model <- VariationalMaximimizationStep(bn = ssm$var_counts,
+                                                    dn = ssm$ref_counts + ssm$var_counts,
+                                                    cn = ssm$normal_cn,
+                                                    cr = ssm$frac_cn_sub1 * (ssm$major_cn_sub1 + ssm$minor_cn_sub1) +
+                                                      ssm$frac_cn_sub2 *(ssm$major_cn_sub2 + ssm$minor_cn_sub2),
+                                                    max_mult_cn_sub1 = ssm$major_cn_sub1,
+                                                    max_mult_cn_sub2 = ssm$major_cn_sub2,
+                                                    frac_cn_sub1 = ssm$frac_cn_sub1,
+                                                    frac_cn_sub2 = ssm$frac_cn_sub2,
+                                                    subclonal_cn = ssm$subclonal_cn,
+                                                    epi = epi,
+                                                    purity = unique(ssm$purity),
+                                                    model = res$full.model,
+                                                    fit_params_ccf = F)
+
+    ll[vbiter] = VariationalLowerBound(bn = ssm$var_counts,
+                                       dn = ssm$ref_counts + ssm$var_counts,
+                                       cn = ssm$normal_cn,
+                                       cr = ssm$frac_cn_sub1 * (ssm$major_cn_sub1 + ssm$minor_cn_sub1) +
+                                         ssm$frac_cn_sub2 *(ssm$major_cn_sub2 + ssm$minor_cn_sub2),
+                                       epi = epi,
+                                       purity = unique(ssm$purity),
+                                       model = res$full.model)/length(res$full.model$bv)
+
+    converged <- abs(ll[vbiter] - ll[vbiter-1]) < (tol * abs(ll[vbiter]))
+    degenerated <- (ll[vbiter] - ll[vbiter-1]) < 0
+    if(verbose) cat(sprintf("\rVB-EM-%d: L = %.8f \r", vbiter, ll[vbiter]))
+  }
+
+  res$full.model <- SortClusters(res$full.model)
+
+  res$label <- apply(res$full.model$responsibility, 1, which.max)
+
+  Epi <- (res$full.model$dirichletConcentration + colSums(res$full.model$responsibility)) /
+    (length(res$full.model$ccfMean) * res$full.model$dirichletConcentration0 + length(res$label))
+  res$full.model$Epi <- Epi/sum(Epi)
+
+  return(res)
+}
+
+#' Annotate mydata with Ccube results
+#' @param ssm Ccube input data
+#' @param res Ccube results list
+#' @return ssm Annotated input data
+#' @export
+AnnotateCcubeResults <- function(ssm, res) {
+
+  ssm <- CheckAndPrepareCcubeInupts(ssm)
+  ssm <- GetCcf(ssm, use = "use_base")
+
+
+  ssm$ccube_ccf_mean <- res$full.model$ccfMean[res$label]
+  ssm$ccube_mult <- res$full.model$bv
+
+  ssm <- dplyr::mutate( dplyr::rowwise(ssm),
+                        ccube_ccf = MapVaf2CcfPyClone(vaf,
+                                                      purity,
+                                                      normal_cn,
+                                                      total_cn,
+                                                      total_cn,
+                                                      ccube_mult,
+                                                      constraint=F) )
+
+  return(ssm)
+}
 
