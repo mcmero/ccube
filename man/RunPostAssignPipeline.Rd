@@ -7,11 +7,11 @@
 RunPostAssignPipeline(snvRes, svRes = NULL, mydata)
 }
 \arguments{
-\item{snvRes}{SNV result list}
+\item{snvRes}{A default reference Ccube SNV or SV result list}
 
-\item{svRes}{SV result list}
+\item{svRes}{An optional second reference Ccube SNV or SV results list. By default the second result list is NULL. If the second list is provided, it will be combined with the first one}
 
-\item{mydata}{A data frame of variants to be assigned. Ideally, the data has been processed by CcubeSV model. So it should have ccube_mult1 and ccube_mult2 columns.}
+\item{mydata}{A data frame of variants (SNV or SV) to be assigned. Ideally, the data has been processed by CcubeSV or Ccube model. So it should have ccube_mult1/ccube_mult2 or ccube_mult columns.}
 }
 \value{
 A list containing, res, the post assigned result list and, ssm, the annotated data
