@@ -280,45 +280,17 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
 
   }
 
-  # make outputs
+  # Annote results
   if ( (runAnalysis | runAnalysisSnap | runQC | runPcawgMergeQc) ) {
 
+
     if (modelSV) {
-      ssm$ccube_ccf_mean <- res$full.model$ccfMean[res$label]
-      ssm$ccube_mult1 <- res$full.model$bv1
-      ssm$ccube_mult2 <- res$full.model$bv2
-
-      ssm <- dplyr::mutate( dplyr::rowwise(ssm),
-                    ccube_ccf1 = MapVaf2CcfPyClone(vaf1,
-                                                   purity,
-                                                   normal_cn,
-                                                   total_cn1,
-                                                   total_cn1,
-                                                   ccube_mult1,
-                                                   constraint=F),
-                    ccube_ccf2 = MapVaf2CcfPyClone(vaf2,
-                                                   purity,
-                                                   normal_cn,
-                                                   total_cn2,
-                                                   total_cn2,
-                                                   ccube_mult2,
-                                                   constraint=F)
-      )
-
+      func_annote <- get("AnnotateCcubeResults_sv")
     } else {
-
-      ssm$ccube_ccf_mean <- res$full.model$ccfMean[res$label]
-      ssm$ccube_mult <- res$full.model$bv
-
-      ssm <- dplyr::mutate( dplyr::rowwise(ssm),
-                    ccube_ccf = MapVaf2CcfPyClone(vaf,
-                                                  purity,
-                                                  normal_cn,
-                                                  total_cn,
-                                                  total_cn,
-                                                  ccube_mult,
-                                                  constraint=F) )
+      func_annote <- get("AnnotateCcubeResults")
     }
+
+    ssm <- func_annote(ssm = ssm, res = res)
 
   }
 
@@ -361,12 +333,21 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
 
 
 #' A pipeline to post assign events.
-#' @param snvRes SNV result list
-#' @param svRes SV result list
-#' @param mydata A data frame of variants to be assigned. Ideally, the data has been processed by CcubeSV model. So it should have ccube_mult1 and ccube_mult2 columns.
+#' @param snvRes A default reference Ccube SNV or SV result list
+#' @param svRes An optional second reference Ccube SNV or SV results list. By default the second result list is NULL. If the second list is provided, it will be combined with the first one
+#' @param mydata A data frame of variants (SNV or SV) to be assigned. Ideally, the data has been processed by CcubeSV or Ccube model. So it should have ccube_mult1/ccube_mult2 or ccube_mult columns.
 #' @return A list containing, res, the post assigned result list and, ssm, the annotated data
 #' @export
 RunPostAssignPipeline <- function(snvRes, svRes = NULL, mydata) {
+
+
+  if ( all( c("var_counts1","ref_counts1", "var_counts2","ref_counts2") %in% names(mydata) ) &
+       ! all( c("var_counts","ref_counts") %in% names(mydata) ) ) {
+    modelSV = T
+  } else {
+    modelSV = F
+  }
+
 
   if (!is.null(svRes)) {
     combinedRes <- CombineSNVandSVResults(snvRes, svRes)
@@ -374,14 +355,39 @@ RunPostAssignPipeline <- function(snvRes, svRes = NULL, mydata) {
     combinedRes <- snvRes
   }
 
-  postAssignRes <- AssignWithCcube_sv(combinedRes, mydata, verbose = T)
+
+  if (modelSV) {
+    func_assign <- get("AssignWithCcube_sv")
+  } else {
+    func_assign <- get("AssignWithCcube")
+  }
+
+  postAssignRes <- func_assign(combinedRes, mydata, verbose = T)
 
   if (nrow(mydata) > 1) {
-    postAssignRes <- CullEmptyClusters_sv(res = postAssignRes, ssm = mydata)
-    postAssignRes <- CullSmallClusters_sv(res = postAssignRes, ssm = mydata, th = 1e-2)
-    postAssignRes <- MergeClusters_sv(res = postAssignRes, ssm = mydata)
+
+    if (modelSV) {
+      func_qc1 <- get("CullEmptyClusters_sv")
+      func_qc2 <- get("CullSmallClusters_sv")
+      func_qc3 <- get("MergeClusters_sv")
+    } else {
+      func_qc1 <- get("CullEmptyClusters")
+      func_qc2 <- get("CullSmallClusters")
+      func_qc3 <- get("MergeClusters")
+    }
+
+    postAssignRes <- func_qc1(res = postAssignRes, ssm = mydata)
+    postAssignRes <- func_qc2(res = postAssignRes, ssm = mydata, th = 1e-2)
+    postAssignRes <- func_qc3(res = postAssignRes, ssm = mydata)
+
   }
-  annotatedSsm <- AnnotateCcubeResults_sv(mydata, postAssignRes)
+
+  if (modelSV) {
+    func_annotate <- get("AnnotateCcubeResults_sv")
+  } else {
+    func_annotate <- get("AnnotateCcubeResults")
+  }
+  annotatedSsm <- func_annotate(mydata, postAssignRes)
 
   return(list(res = postAssignRes, ssm = annotatedSsm))
 }
