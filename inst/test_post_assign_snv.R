@@ -25,7 +25,7 @@ fn = "~/Desktop/bad_sample_post_assign_snv_reference_combined_model_based.pdf"
 MakeCcubeStdPlot(ssm = postAssignRes$ssm, res = postAssignRes$res, printPlot = T,fn=fn)
 
 # Post-assign with SV results only
-postAssignRes <- RunPostAssignPipeline(snvRes = svRes1$res, mydata = mydata)
+postAssignRes <- RunPostAssignPipeline(svRes = svRes1$res, mydata = mydata)
 fn = "~/Desktop/bad_sample_post_assign_snv_reference_sv_model_based.pdf"
 MakeCcubeStdPlot(ssm = postAssignRes$ssm, res = postAssignRes$res, printPlot = T,fn=fn)
 
@@ -48,6 +48,6 @@ fn = "~/Desktop/good_sample_post_assign_snv_reference_combined_model_based.pdf"
 MakeCcubeStdPlot(ssm = postAssignRes$ssm, res = postAssignRes$res, printPlot = T,fn=fn)
 
 # Post-assign with snv results only
-postAssignRes <- RunPostAssignPipeline(snvRes = svRes2$res, mydata = mydata)
+postAssignRes <- RunPostAssignPipeline(svRes = svRes2$res, mydata = mydata)
 fn = "~/Desktop/good_sample_post_assign_snv_reference_sv_model_based.pdf"
 MakeCcubeStdPlot(ssm = postAssignRes$ssm, res = postAssignRes$res, printPlot = T,fn=fn)

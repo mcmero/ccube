@@ -333,13 +333,24 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
 
 
 #' A pipeline to post assign events.
-#' @param snvRes A default reference Ccube SNV or SV result list
-#' @param svRes An optional second reference Ccube SNV or SV results list. By default the second result list is NULL. If the second list is provided, it will be combined with the first one
+#' @param snvRes A reference Ccube SNV result list
+#' @param svRes A reference Ccube SV results list.
 #' @param mydata A data frame of variants (SNV or SV) to be assigned. Ideally, the data has been processed by CcubeSV or Ccube model. So it should have ccube_mult1/ccube_mult2 or ccube_mult columns.
 #' @return A list containing, res, the post assigned result list and, ssm, the annotated data
+#' @details At least one of snvRes and svRes has to be provided. If the both lists are provided, they will be combined.
 #' @export
-RunPostAssignPipeline <- function(snvRes, svRes = NULL, mydata) {
+RunPostAssignPipeline <- function(snvRes = NULL, svRes = NULL, mydata) {
 
+
+  stopifnot( !is.null(snvRes) | !is.null(svRes)  )
+
+  if (!is.null(snvRes) & !is.null(snvRes) ) {
+    referenceRes <- CombineSNVandSVResults(snvRes, svRes)
+  } else if (!is.null(snvRes) & is.null(svRes)) {
+    referenceRes <- snvRes
+  } else {
+    referenceRes <- svRes
+  }
 
   if ( all( c("var_counts1","ref_counts1", "var_counts2","ref_counts2") %in% names(mydata) ) &
        ! all( c("var_counts","ref_counts") %in% names(mydata) ) ) {
@@ -348,21 +359,13 @@ RunPostAssignPipeline <- function(snvRes, svRes = NULL, mydata) {
     modelSV = F
   }
 
-
-  if (!is.null(svRes)) {
-    combinedRes <- CombineSNVandSVResults(snvRes, svRes)
-  } else {
-    combinedRes <- snvRes
-  }
-
-
   if (modelSV) {
     func_assign <- get("AssignWithCcube_sv")
   } else {
     func_assign <- get("AssignWithCcube")
   }
 
-  postAssignRes <- func_assign(combinedRes, mydata, verbose = T)
+  postAssignRes <- func_assign(referenceRes, mydata, verbose = T)
 
   if (nrow(mydata) > 1) {
 
