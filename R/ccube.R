@@ -848,7 +848,7 @@ MakeCcubeStdPlot <- function(ssm, res, myColors=gg_color_hue(10), printPlot = F,
   par(mfrow=c(2,2))
   plot(ssm$ccube_ccf, ssm$vaf, col = myColors[res$label],
        xlab = "cancer cell fraction", ylab = "variant allele frequecy",
-       main = "ccf vs vaf (colored by cluster memebership)")
+       main = "ccf vs vaf (colored by cluster membership)")
   cellularity <- unique(ssm$purity)
   ssm$total_cn =ssm$frac_cn_sub1 * (ssm$major_cn_sub1 + ssm$minor_cn_sub1) +
     ssm$frac_cn_sub2 *(ssm$major_cn_sub2 + ssm$minor_cn_sub2)
