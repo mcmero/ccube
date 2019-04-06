@@ -313,6 +313,53 @@ ParseSnvCnaConsensus <- function(ssm, cna) {
   return(ssm)
 }
 
+#' Parse Battenberg copy number files
+#' @param ssm ssms
+#' @param cna copy number
+#' @return ccube data frame
+#' @export
+ParseSnvCnaBattenberg <- function(ssm, cna) {
+
+  id <- do.call(rbind, strsplit(as.character(ssm$gene), "_", fixed = T))
+  ssm$chr = id[,1]
+  ssm$pos = as.integer(id[,2])
+  ssm$major_cn_sub1 = 1
+  ssm$minor_cn_sub1 = 1
+  ssm$frac_cn_sub1 = 1
+  ssm$major_cn_sub2 = -100
+  ssm$minor_cn_sub2 = -100
+  ssm$frac_cn_sub2 = 0
+  ssm$mu_r <- NULL
+  ssm$mu_v <- NULL
+
+  for (jj in seq_len(nrow(cna)) ) {
+    cc = cna[jj,]
+    idx = which(ssm$chr == cc$chr &  (ssm$pos >= cc$startpos & ssm$pos <= cc$endpos) )
+    if (length(idx) > 0) {
+      ssm[idx, ]$major_cn_sub1 <- cc$nMaj1_A
+      ssm[idx, ]$minor_cn_sub1 <- cc$nMin1_A
+      ssm[idx, ]$frac_cn_sub1 <- cc$frac1_A
+      ssm[idx, ]$frac_cn_sub2 <- 1 - cc$frac1_A
+
+      if (  !is.na(  cc$nMaj2_A ) ) {
+        ssm[idx, ]$major_cn_sub2 <- cc$nMaj2_A
+        ssm[idx, ]$minor_cn_sub2 <- cc$nMin2_A
+      } else {
+        ssm[idx, ]$major_cn_sub2 <- -100
+        ssm[idx, ]$minor_cn_sub2 <- -100
+      }
+    }
+  }
+
+  ssm$chr <-NULL
+  ssm$pos <-NULL
+  ssm$normal_cn = 2
+  ssm <- dplyr::rename(ssm, ref_counts=a, total_counts=d, mutation_id = gene)
+  ssm <- dplyr::mutate(ssm, var_counts=total_counts-ref_counts)
+  ssm
+}
+
+
 #' Assign data to centers
 #' @param x datas
 #' @param centers cluster centers
