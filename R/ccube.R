@@ -794,10 +794,15 @@ VariationalLowerBound <- function(bn, dn, cn, cr, epi, purity, model) {
 #' @return purity
 #' @export
 GetPurity <- function(mydata, wgd=F, K = 6, th = 1.5e-2) {
+
   vtox<-function(v,nA,nB,tA,tB)
   {
     (nB - nB*v - nA*v) / (tA*v + tB*v + nB - tB -nA*v - nB*v)
   }
+
+  mydata <- CheckAndPrepareCcubeInupts(mydata, estimatePurity = F)
+
+  tmpdata <- dplyr::filter(mydata, frac_cn_sub1 == 1) # Use only clonal CN regions
 
   tmpdata <- dplyr::filter(mydata, major_cn == minor_cn & major_cn != 0)
 
@@ -1517,7 +1522,7 @@ WritePcawgFormats <- function(ssm, res, resultFolder, sampleName,
 }
 
 
-CheckAndPrepareCcubeInupts <- function(mydata) {
+CheckAndPrepareCcubeInupts <- function(mydata, estimatePurity = T) {
 
   stopifnot(
     all(c("var_counts","ref_counts") %in% names(mydata)))
@@ -1580,7 +1585,7 @@ CheckAndPrepareCcubeInupts <- function(mydata) {
     mydata$normal_cn <- 2
   }
 
-  if ( ! "purity" %in% names(mydata) ) {
+  if ( ! "purity" %in% names(mydata) & estimatePurity) {
     message(sprintf("Missing column: purity. Estimate purity with GetPurity"))
     mydata$purity <- GetPurity(mydata)
   }
