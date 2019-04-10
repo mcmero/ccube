@@ -22,7 +22,7 @@
 #' @param ssm Ccube input data
 #' @param maxSnv maximum number of SNVs. Used in runParser mode
 #' @param use option for rough estimator for ccf
-#' @return returns a list including the prefered solution, res; annotated ssm, ssm; a list of all solutions, results; trace of ELBOs
+#' @return returns a list including the prefered solution, res; annotated ssm, ssm; a list of all solutions, results; trace of ELBOs, lb; removed events, droppedSsm
 #' @export
 RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder = NULL, makeFolders = F,
                              runParser = F, variantCaller = NULL, cnaCaller = NULL,
