@@ -20,10 +20,9 @@
 #' @param ccubeResultRDataFile path to Ccube result Rdata
 #' @param modelSV using double break points model
 #' @param ssm Ccube input data
-#' @param returnAll return results to the current R session
 #' @param maxSnv maximum number of SNVs. Used in runParser mode
 #' @param use option for rough estimator for ccf
-#' @return If returnAll flag is up, returns a list including the prefered solution, res; annotated ssm, ssm; a list of all solutions, results; trace of ELBOs
+#' @return returns a list including the prefered solution, res; annotated ssm, ssm; a list of all solutions, results; trace of ELBOs
 #' @export
 RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder = NULL, makeFolders = F,
                              runParser = F, variantCaller = NULL, cnaCaller = NULL,
@@ -151,14 +150,17 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
 
     # filtering
     if ( "major_cn" %in% colnames(ssm)  ) {
+      droppedSsm <- dplyr::filter(ssm, major_cn <= 0)
       ssm <- dplyr::filter(ssm, major_cn > 0)
     }
 
     if ( "major_cn1" %in% colnames(ssm)  ) {
+      droppedSsm <- dplyr::filter(ssm, major_cn1 <= 0)
       ssm <- dplyr::filter(ssm, major_cn1 > 0)
     }
 
     if ( "major_cn2" %in% colnames(ssm)  ) {
+      droppedSsm <- dplyr::filter(ssm, major_cn2 <= 0)
       ssm <- dplyr::filter(ssm, major_cn2 > 0)
     }
 
@@ -328,7 +330,7 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
 
   }
 
-  return(list(res = res, results = results, ssm = ssm, lb = lb))
+  return(list(res = res, results = results, ssm = ssm, lb = lb, droppedSsm = droppedSsm))
 }
 
 
