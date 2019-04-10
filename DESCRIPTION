@@ -16,7 +16,6 @@ Imports:
     Matrix,
     pracma,
     dplyr,
-    monomvn,
     foreach
 RoxygenNote: 6.1.0
 Collate: 
