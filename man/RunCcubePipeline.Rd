@@ -58,8 +58,6 @@ RunCcubePipeline(sampleName = NULL, dataFolder = NULL,
 
 \item{ssm}{Ccube input data}
 
-\item{returnAll}{return results to the current R session}
-
 \item{maxSnv}{maximum number of SNVs. Used in runParser mode}
 
 \item{use}{option for rough estimator for ccf}
