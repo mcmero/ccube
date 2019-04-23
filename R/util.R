@@ -120,6 +120,34 @@ MapVaf2CcfPyClone <- function(x, t, cn, cr, cv, bv,
   }
 }
 
+#' Convert vaf to ccf using ccube linear mapping
+#' @param vaf vaf
+#' @param purity purity
+#' @param normal_cn normal total copy number
+#' @param total_cn (average) total copy number in cancer population
+#' @param mult (average) mutation multplicity
+#' @param epi sequencing error
+#' @return ccf
+#' @export
+MapVaf2CcfLinear <- function ( vaf, purity, normal_cn, total_cn, mult, epi = 1e-3 ) {
+  w = ( purity * (mult * (1-epi) - total_cn * epi ) ) / ( (1-purity) * normal_cn + purity * total_cn )
+  return( (vaf-epi)/w )
+}
+
+#' Convert ccf to vaf using ccube linear mapping
+#' @param ccf ccf
+#' @param purity purity
+#' @param normal_cn normal total copy number
+#' @param total_cn (average) total copy number in cancer population
+#' @param mult (average) mutation multplicity
+#' @param epi sequencing error
+#' @return vaf
+#' @export
+MapCcf2VafLinear <- function ( ccf, purity, normal_cn, total_cn, mult, epi = 1e-3 ) {
+  w = ( purity * (mult * (1-epi) - total_cn * epi ) ) / ( (1-purity) * normal_cn + purity * total_cn )
+  return( w*ccf + epi )
+}
+
 ############ Vector dot product ############
 # handle single row matrix by multiplying each value
 # but not sum them up
@@ -323,9 +351,9 @@ ParseSnvCnaBattenberg <- function(ssm, cna) {
   id <- do.call(rbind, strsplit(as.character(ssm$gene), "_", fixed = T))
   ssm$chr = id[,1]
   ssm$pos = as.integer(id[,2])
-  ssm$major_cn_sub1 = 1
-  ssm$minor_cn_sub1 = 1
-  ssm$frac_cn_sub1 = 1
+  ssm$major_cn_sub1 = NA
+  ssm$minor_cn_sub1 = NA
+  ssm$frac_cn_sub1 = NA
   ssm$major_cn_sub2 = -100
   ssm$minor_cn_sub2 = -100
   ssm$frac_cn_sub2 = 0
@@ -351,11 +379,36 @@ ParseSnvCnaBattenberg <- function(ssm, cna) {
     }
   }
 
-  ssm$chr <-NULL
-  ssm$pos <-NULL
+
+
   ssm$normal_cn = 2
   ssm <- dplyr::rename(ssm, ref_counts=a, total_counts=d, mutation_id = gene)
   ssm <- dplyr::mutate(ssm, var_counts=total_counts-ref_counts)
+
+  HasNonOverLappingSsm <-  sum( is.na(ssm$major_cn_sub1) ) > 0
+  if ( HasNonOverLappingSsm ) {
+
+    nonOverLappingSsm <- dplyr::filter(ssm, is.na(major_cn_sub1) )
+
+    for ( ii in 1:nrow(nonOverLappingSsm)  ) {
+      ref_range_ssm = which(ssm$chr == nonOverLappingSsm[ii, ]$chr & !is.na(ssm$major_cn_sub1) )
+      ref_idx = which.min(  abs( ssm[ref_range_ssm,]$pos - nonOverLappingSsm[ii, ]$pos) )
+      idx = ref_range_ssm[ref_idx]
+      nonOverLappingSsm[ii, ]$major_cn_sub1 <- ssm[idx, ]$major_cn_sub1
+      nonOverLappingSsm[ii, ]$minor_cn_sub1 <- ssm[idx, ]$minor_cn_sub1
+      nonOverLappingSsm[ii, ]$frac_cn_sub1 <- ssm[idx, ]$frac_cn_sub1
+      nonOverLappingSsm[ii, ]$frac_cn_sub2 <- ssm[idx, ]$frac_cn_sub2
+      nonOverLappingSsm[ii, ]$major_cn_sub2 <- ssm[idx, ]$major_cn_sub2
+      nonOverLappingSsm[ii, ]$minor_cn_sub2 <- ssm[idx, ]$minor_cn_sub2
+    }
+
+    ssm[which(ssm$id %in% nonOverLappingSsm$id), ] = nonOverLappingSsm
+
+  }
+
+
+  ssm$chr <-NULL
+  ssm$pos <-NULL
   ssm
 }
 
