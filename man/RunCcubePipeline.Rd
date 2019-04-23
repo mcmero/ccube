@@ -63,7 +63,7 @@ RunCcubePipeline(sampleName = NULL, dataFolder = NULL,
 \item{use}{option for rough estimator for ccf}
 }
 \value{
-If returnAll flag is up, returns a list including the prefered solution, res; annotated ssm, ssm; a list of all solutions, results; trace of ELBOs
+returns a list including the prefered solution, res; annotated ssm, ssm; a list of all solutions, results; trace of ELBOs, lb; removed events, droppedSsm
 }
 \description{
 Run Ccube analysis
