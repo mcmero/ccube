@@ -406,6 +406,14 @@ ParseSnvCnaBattenberg <- function(ssm, cna) {
 
   }
 
+  # check gender
+  maleCna <- dplyr::filter(cna, chr %in% c("Y", "y") & !is.na(total_cn) )
+  isMale <- nrow(maleCna) > 0
+
+  if (isMale) {
+    ssm <- dplyr::mutate(dplyr::rowwise(ssm),
+                         normal_cn = if (chr %in% c("X", "Y", "x", "y") ) {1} else {2}  )
+  }
 
   ssm$chr <-NULL
   ssm$pos <-NULL
