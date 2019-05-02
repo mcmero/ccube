@@ -407,7 +407,7 @@ ParseSnvCnaBattenberg <- function(ssm, cna) {
   }
 
   # check gender
-  maleCna <- dplyr::filter(cna, chr %in% c("Y", "y") & !is.na(total_cn) )
+  maleCna <- dplyr::filter(cna, chr %in% c("Y", "y") & !is.na(nMaj1_A) )
   isMale <- nrow(maleCna) > 0
 
   if (isMale) {
