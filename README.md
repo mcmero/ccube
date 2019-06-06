@@ -17,7 +17,7 @@ The package contains four Bayesian mixture models, all fitted with variational i
 Installation
 ----
 ```r
-requires(devtools)
+require(devtools)
 devtools::install_github("keyuan/ccube")
 ```
 
