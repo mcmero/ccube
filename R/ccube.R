@@ -1404,6 +1404,14 @@ MergeClusters <- function(res = res, ssm = ssm, tol = 1e-8, maxiter = 100, epi =
 #' @param res Ccube result list
 #' @param resultFolder path to file
 #' @param sampleName sample name
+#' @param allFormats all PCAWG output formats
+#' @param basicFormats basic PCAWG output formats
+#' @param outputMult format for multiplicities
+#' @param outputAssignProb format for assignment probabilities
+#' @param outputAssign format for assignment
+#' @param outputSubStruct format for subclonal structure
+#' @param outputCcm format for co-clustering matrix
+#' @param outputCcmIdx format for variant indices in co-clustering matrix
 #' @return NULL
 #' @export
 WritePcawgFormats <- function(ssm, res, resultFolder, sampleName,
@@ -1600,7 +1608,7 @@ CheckAndPrepareCcubeInupts <- function(mydata, estimatePurity = T) {
 #' @param tol convergence threshold
 #' @param maxiter maximum iterations, default number is 100.
 #' @param epi sequencing error, default is 1e-3
-#' @param verbos show VBEM progress
+#' @param verbose show VBEM progress
 #' @return a standard Ccube model with recomputed responsibilities and logResponsibilities
 #' @export
 AssignWithCcube <- function(res, ssm, tol = 1e-8, maxiter = 100, epi = 1e-3, verbose = F) {

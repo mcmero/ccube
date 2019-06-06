@@ -17,6 +17,22 @@ WritePcawgFormats(ssm, res, resultFolder, sampleName, allFormats = F,
 \item{resultFolder}{path to file}
 
 \item{sampleName}{sample name}
+
+\item{allFormats}{all PCAWG output formats}
+
+\item{basicFormats}{basic PCAWG output formats}
+
+\item{outputMult}{format for multiplicities}
+
+\item{outputAssignProb}{format for assignment probabilities}
+
+\item{outputAssign}{format for assignment}
+
+\item{outputSubStruct}{format for subclonal structure}
+
+\item{outputCcm}{format for co-clustering matrix}
+
+\item{outputCcmIdx}{format for variant indices in co-clustering matrix}
 }
 \description{
 Write files in PCAWG-11 formats, works for both CcubeCore and ccube_m6 output

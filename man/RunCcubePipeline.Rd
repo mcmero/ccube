@@ -5,15 +5,15 @@
 \title{Run Ccube analysis}
 \usage{
 RunCcubePipeline(sampleName = NULL, dataFolder = NULL,
-  resultFolder = NULL, makeFolders = F, runParser = F,
-  variantCaller = NULL, cnaCaller = NULL, runAnalysis = F,
-  runQC = F, runAnalysisSnap = F, runPcawgMergeQc = F,
-  writeOutput = F, modelSV = F, allFormats = F, basicFormats = T,
-  vcfFile = NULL, copyNumberFile = NULL, purity = NA,
-  numOfClusterPool = NULL, numOfRepeat = NULL, epi = 0.001,
-  tol = 1e-08, maxiter = 1000, multiCore = F,
-  ccubeInputRDataFile = NULL, ccubeResultRDataFile = NULL,
-  ssm = NULL, returnAll = F, maxSnv = 1e+07, use = "use_base")
+  resultFolder = NULL, makeFolders = F, runParser = F, variantCaller,
+  cnaCaller = NULL, runAnalysis = F, runQC = F,
+  runAnalysisSnap = F, runPcawgMergeQc = F, writeOutput = F,
+  modelSV = F, allFormats = F, basicFormats = T, vcfFile = NULL,
+  copyNumberFile = NULL, purity = NA, numOfClusterPool = NULL,
+  numOfRepeat = NULL, epi = 0.001, tol = 1e-08, maxiter = 1000,
+  multiCore = F, ccubeInputRDataFile = NULL,
+  ccubeResultRDataFile = NULL, ssm = NULL, maxSnv = 1e+07,
+  use = "use_base")
 }
 \arguments{
 \item{sampleName}{sample name}
@@ -26,13 +26,25 @@ RunCcubePipeline(sampleName = NULL, dataFolder = NULL,
 
 \item{runParser}{run parser}
 
+\item{variantCaller}{name of variant caller}
+
+\item{cnaCaller}{name of CNA caller}
+
 \item{runAnalysis}{run analysis}
 
 \item{runQC}{run QC}
 
 \item{runAnalysisSnap}{run a lite version of the main analysis}
 
+\item{runPcawgMergeQc}{run QC for PCAWG samples}
+
+\item{writeOutput}{write output into files}
+
 \item{modelSV}{using double break points model}
+
+\item{allFormats}{all PCAWG output formats}
+
+\item{basicFormats}{basic PCAWG output formats}
 
 \item{vcfFile}{path to vcf file}
 

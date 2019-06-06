@@ -2,22 +2,22 @@ Package: ccube
 Type: Package
 Title: ccube
 Date: 2016-03-14
-Version: 0.0.0.9000
+Version: 1.0
 Authors@R: person("Ke", "Yuan", email = "ke.yuan@glasgow.ac.uk",
     role = c("aut", "cre"))
 Maintainer: Ke Yuan <ke.yuan@glasgow.ac.uk>
 Description: A R package for estimating cancer cell fractions via clustering.
 License: GPL-3
 LazyData: TRUE
+Encoding: UTF-8
 Depends:
     R (>= 3.0),
-    methods
+    foreach
 Imports:
     Matrix,
     pracma,
-    dplyr,
-    foreach
-RoxygenNote: 6.1.0
+    dplyr
+RoxygenNote: 6.1.1
 Collate: 
     'ccube.R'
     'ccube_sv.R'
@@ -25,3 +25,7 @@ Collate:
     'vbgmm.R'
     'vbsmm.R'
     'wrapper.R'
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr

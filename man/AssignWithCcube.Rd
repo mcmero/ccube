@@ -18,7 +18,7 @@ AssignWithCcube(res, ssm, tol = 1e-08, maxiter = 100, epi = 0.001,
 
 \item{epi}{sequencing error, default is 1e-3}
 
-\item{verbos}{show VBEM progress}
+\item{verbose}{show VBEM progress}
 }
 \value{
 a standard Ccube model with recomputed responsibilities and logResponsibilities

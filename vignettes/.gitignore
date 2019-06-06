@@ -4,3 +4,6 @@ ccube_files
 rsconnect
 .DS_Store
 ccube_cache/html/
+ccube_cache/html/__packages
+*.html
+*.R

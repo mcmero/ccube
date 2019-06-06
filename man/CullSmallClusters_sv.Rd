@@ -14,6 +14,8 @@ CullSmallClusters_sv(res, ssm, th = 0.01, epi = 0.001, useEstep = T)
 \item{th}{threshold for small clusters}
 
 \item{epi}{sequencing error}
+
+\item{useEstep}{flag to use Estep for reassignment}
 }
 \value{
 Ccube result list

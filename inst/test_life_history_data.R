@@ -2,7 +2,6 @@ rm(list = ls())
 library(dplyr)
 library(gtools)
 library(doParallel)
-library(foreach)
 library(ccube)
 registerDoParallel(cores=4)
 

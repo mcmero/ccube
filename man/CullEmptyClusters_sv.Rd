@@ -11,6 +11,8 @@ CullEmptyClusters_sv(res, ssm, useEstep = T, epi = 0.001)
 
 \item{ssm}{Ccub input data}
 
+\item{useEstep}{flag to use Estep for reassignment}
+
 \item{epi}{sequencing error}
 }
 \value{

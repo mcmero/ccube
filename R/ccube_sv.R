@@ -1082,6 +1082,7 @@ MakeCcubeStdPlot_sv <- function(ssm, res, myColors=gg_color_hue(10), printPlot =
 #' Remove empty clusters
 #' @param res Ccube result list
 #' @param ssm Ccub input data
+#' @param useEstep flag to use Estep for reassignment
 #' @param epi sequencing error
 #' @return Ccube result list
 #' @export
@@ -1101,6 +1102,7 @@ CullEmptyClusters_sv <- function(res, ssm, useEstep = T, epi = 1e-3) {
 #' @param ssm Ccub input data
 #' @param th threshold for small clusters
 #' @param epi sequencing error
+#' @param useEstep flag to use Estep for reassignment
 #' @return Ccube result list
 #' @export
 CullSmallClusters_sv <- function(res, ssm, th = 1e-2, epi = 1e-3,  useEstep = T) {
@@ -1507,6 +1509,14 @@ MergeClusters_sv <- function(res = res, ssm = ssm, tol = 1e-8, maxiter = 100, ep
 #' @param res Ccube result list
 #' @param resultFolder path to file
 #' @param sampleName sample name
+#' @param allFormats all PCAWG output formats
+#' @param basicFormats basic PCAWG output formats
+#' @param outputMult format for multiplicities
+#' @param outputAssignProb format for assignment probabilities
+#' @param outputAssign format for assignment
+#' @param outputSubStruct format for subclonal structure
+#' @param outputCcm format for co-clustering matrix
+#' @param outputCcmIdx format for variant indices in co-clustering matrix
 #' @return NULL
 #' @export
 WritePcawgFormats_sv <- function(ssm, res, resultFolder, sampleName,
@@ -1772,7 +1782,7 @@ CheckAndPrepareCcubeInupts_sv <- function(mydata) {
 #' @param tol convergence threshold
 #' @param maxiter maximum iterations, default number is 100.
 #' @param epi sequencing error, default is 1e-3
-#' @param verbos show VBEM progress
+#' @param verbose show VBEM progress
 #' @return a standard CcubeSV model with recomputed responsibilities and logResponsibilities
 #' @export
 AssignWithCcube_sv <- function(res, ssm, tol = 1e-8, maxiter = 100, epi = 1e-3, verbose = F) {

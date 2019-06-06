@@ -4,9 +4,15 @@
 #' @param resultFolder path to output formats files
 #' @param makeFolders flag to create data and results folders, default false
 #' @param runParser run parser
+#' @param variantCaller name of variant caller
+#' @param cnaCaller name of CNA caller
 #' @param runAnalysis run analysis
 #' @param runQC run QC
+#' @param runPcawgMergeQc run QC for PCAWG samples
 #' @param runAnalysisSnap run a lite version of the main analysis
+#' @param writeOutput write output into files
+#' @param allFormats all PCAWG output formats
+#' @param basicFormats basic PCAWG output formats
 #' @param vcfFile path to vcf file
 #' @param copyNumberFile path to copy number file
 #' @param purity estimated purity of the sample
@@ -25,7 +31,7 @@
 #' @return returns a list including the prefered solution, res; annotated ssm, ssm; a list of all solutions, results; trace of ELBOs, lb; removed events, droppedSsm
 #' @export
 RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder = NULL, makeFolders = F,
-                             runParser = F, variantCaller = NULL, cnaCaller = NULL,
+                             runParser = F, variantCaller, cnaCaller = NULL,
                              runAnalysis = F, runQC = F, runAnalysisSnap = F, runPcawgMergeQc =F,
                              writeOutput = F, modelSV = F,
                              allFormats = F, basicFormats = T,
@@ -34,7 +40,7 @@ RunCcubePipeline <- function(sampleName = NULL, dataFolder = NULL, resultFolder 
                              epi = 1e-3, tol = 1e-8, maxiter = 1e3,
                              multiCore = F, ccubeInputRDataFile = NULL,
                              ccubeResultRDataFile = NULL,
-                             ssm = NULL, returnAll = F,
+                             ssm = NULL,
                              maxSnv = 1e7, use = "use_base"){
 
   # stopifnot( runParser | runAnalysis | runAnalysisSnap,
