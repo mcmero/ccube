@@ -1,8 +1,4 @@
 base
 ccube
 dplyr
-colorspace
 foreach
-iterators
-doParallel
-bindrcpp
