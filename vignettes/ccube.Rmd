@@ -26,6 +26,7 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 
 ```{r, results='hide'}
 library(ccube)
+
 library(dplyr)
 #library(doParallel)
 options(stringsAsFactors = F)
@@ -42,7 +43,7 @@ ccfTrue <- sample(ccfSet, numSnv, c(0.5,0.2,0.3), replace = T) # simulate true c
 purity <- 0.9
 cnPoolMaj <- c(1,2,3,4) # a pool of possible major copy numbers
 cnPoolMin <- c(0,1,2) # a pool of possible minor copy numbers
-cnPoolMajFractions <- c(0.30, 0.30, 0.2,0.2) # prevalence of possible major copy numbers
+cnPoolMajFractions <- c(0.50, 0.30, 0.1,0.1) # prevalence of possible major copy numbers
 cnPoolMinFractions <- c(1/4, 1/2, 1/4) # prevalence of possible minor copy numbers
 
 cnProfile = GenerateCopyNumberProfile(cnPoolMaj, cnPoolMin, 
@@ -72,7 +73,6 @@ mydata <- dplyr::mutate(rowwise(mydata),
 
 head(mydata)
 ```
-
 
 ## Run Ccube pipeline 
 ```{r, cache=T}
@@ -114,6 +114,12 @@ MakeCcubeStdPlot(ssm = results$ssm, res = results$res, printPlot = F)
 ```
 
 
+## Estimate purity 
+Ccube can make its own purity estimation from mutations in normal copy number regions. 
+```{r}
+est_purity = GetPurity(mydata = mydata)
+est_purity
+```
 
 
 
