@@ -16,7 +16,6 @@ build_script:
   - travis-tool.sh r_binary_install Matrix
   - travis-tool.sh r_binary_install pracma
   - travis-tool.sh r_binary_install dplyr
-  - travis-tool.sh r_binary_install monomvn
   - travis-tool.sh install_deps
 
 test_script:
